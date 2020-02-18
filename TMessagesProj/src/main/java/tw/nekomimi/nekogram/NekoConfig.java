@@ -15,23 +15,18 @@ public class NekoConfig {
     public static boolean useIPv6 = false;
     public static boolean ignoreBlocked = false;
     public static boolean forceTablet = false;
-    public static int nameOrder = 1;
     public static int mapPreviewProvider = 0;
     public static boolean residentNotification = false;
     public static boolean saveCacheToPrivateDirectory = Build.VERSION.SDK_INT >= 24;
     public static boolean unlimitedFavedStickers = false;
 
     public static boolean showReport = false;
-    public static boolean showPrPr = false;
+    public static boolean showPrPr = true;
     public static boolean showViewHistory = true;
-    public static boolean showAdminActions = true;
-    public static boolean showChangePermissions = true;
-    public static boolean showDeleteDownloadedFile = true;
+    public static boolean showAdminActions = false;
+    public static boolean showChangePermissions = false;
+    public static boolean showDeleteDownloadedFile = false;
     public static boolean showTranslate = true;
-
-    public static int eventType = 0;
-    public static int actionBarDecoration = 0;
-    public static boolean newYear = false;
 
     public static int translationProvider = 1;
 
@@ -50,7 +45,6 @@ public class NekoConfig {
                 editor.putBoolean("useIPv6", useIPv6);
                 editor.putBoolean("ignoreBlocked", ignoreBlocked);
                 editor.putBoolean("forceTablet", forceTablet);
-                editor.putInt("nameOrder", nameOrder);
                 editor.putInt("mapPreviewProvider", mapPreviewProvider);
                 editor.putBoolean("residentNotification", residentNotification);
                 editor.putBoolean("saveCacheToPrivateDirectory", saveCacheToPrivateDirectory);
@@ -61,11 +55,8 @@ public class NekoConfig {
                 editor.putBoolean("showChangePermissions", showChangePermissions);
                 editor.putBoolean("showDeleteDownloadedFile", showDeleteDownloadedFile);
                 editor.putBoolean("showTranslate", showTranslate);
-                editor.putBoolean("newYear", newYear);
                 editor.putBoolean("unlimitedFavedStickers", unlimitedFavedStickers);
                 editor.putInt("translationProvider", translationProvider);
-                editor.putInt("eventType", eventType);
-                editor.putInt("actionBarDecoration", actionBarDecoration);
 
                 editor.commit();
             } catch (Exception e) {
@@ -84,20 +75,16 @@ public class NekoConfig {
             useIPv6 = preferences.getBoolean("useIPv6", false);
             ignoreBlocked = preferences.getBoolean("ignoreBlocked", false);
             forceTablet = preferences.getBoolean("forceTablet", false);
-            nameOrder = preferences.getInt("nameOrder", 1);
             mapPreviewProvider = preferences.getInt("mapPreviewProvider", 0);
             residentNotification = preferences.getBoolean("residentNotification", false);
             saveCacheToPrivateDirectory = preferences.getBoolean("saveCacheToPrivateDirectory", Build.VERSION.SDK_INT >= 24);
             showReport = preferences.getBoolean("showReport", false);
-            showPrPr = preferences.getBoolean("showPrPr", false);
+            showPrPr = preferences.getBoolean("showPrPr", true);
             showViewHistory = preferences.getBoolean("showViewHistory", true);
-            showAdminActions = preferences.getBoolean("showAdminActions", true);
-            showChangePermissions = preferences.getBoolean("showChangePermissions", true);
-            showDeleteDownloadedFile = preferences.getBoolean("showDeleteDownloadedFile", true);
-            showTranslate = preferences.getBoolean("showTranslate", true);
-            eventType = preferences.getInt("eventType", 0);
-            actionBarDecoration = preferences.getInt("actionBarDecoration", 0);
-            newYear = preferences.getBoolean("newYear", false);
+            showAdminActions = preferences.getBoolean("showAdminActions", false);
+            showChangePermissions = preferences.getBoolean("showChangePermissions", false);
+            showDeleteDownloadedFile = preferences.getBoolean("showDeleteDownloadedFile", false);
+            showTranslate = preferences.getBoolean("showTranslate", false);
             unlimitedFavedStickers = preferences.getBoolean("unlimitedFavedStickers", false);
             translationProvider = preferences.getInt("translationProvider", 1);
             configLoaded = true;
@@ -177,14 +164,6 @@ public class NekoConfig {
         editor.commit();
     }
 
-    public static void setNameOrder(int order) {
-        nameOrder = order;
-        SharedPreferences preferences = ApplicationLoader.applicationContext.getSharedPreferences("nekoconfig", Activity.MODE_PRIVATE);
-        SharedPreferences.Editor editor = preferences.edit();
-        editor.putInt("nameOrder", nameOrder);
-        editor.commit();
-    }
-
     public static void setMapPreviewProvider(int provider) {
         mapPreviewProvider = provider;
         SharedPreferences preferences = ApplicationLoader.applicationContext.getSharedPreferences("nekoconfig", Activity.MODE_PRIVATE);
@@ -212,30 +191,6 @@ public class NekoConfig {
         SharedPreferences preferences = ApplicationLoader.applicationContext.getSharedPreferences("nekoconfig", Activity.MODE_PRIVATE);
         SharedPreferences.Editor editor = preferences.edit();
         editor.putBoolean("saveCacheToPrivateDirectory", saveCacheToPrivateDirectory);
-        editor.commit();
-    }
-
-    public static void setEventType(int type) {
-        eventType = type;
-        SharedPreferences preferences = ApplicationLoader.applicationContext.getSharedPreferences("nekoconfig", Activity.MODE_PRIVATE);
-        SharedPreferences.Editor editor = preferences.edit();
-        editor.putInt("eventType", eventType);
-        editor.commit();
-    }
-
-    public static void setActionBarDecoration(int decoration) {
-        actionBarDecoration = decoration;
-        SharedPreferences preferences = ApplicationLoader.applicationContext.getSharedPreferences("nekoconfig", Activity.MODE_PRIVATE);
-        SharedPreferences.Editor editor = preferences.edit();
-        editor.putInt("actionBarDecoration", actionBarDecoration);
-        editor.commit();
-    }
-
-    public static void toggleNewYear() {
-        newYear = !newYear;
-        SharedPreferences preferences = ApplicationLoader.applicationContext.getSharedPreferences("nekoconfig", Activity.MODE_PRIVATE);
-        SharedPreferences.Editor editor = preferences.edit();
-        editor.putBoolean("newYear", newYear);
         editor.commit();
     }
 

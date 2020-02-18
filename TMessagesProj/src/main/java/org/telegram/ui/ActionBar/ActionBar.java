@@ -203,11 +203,7 @@ public class ActionBar extends FrameLayout {
                 drawable.setBounds(x, y - drawable.getIntrinsicHeight(), x + drawable.getIntrinsicWidth(), y);
                 drawable.draw(canvas);
             }
-                if (NekoConfig.actionBarDecoration == 2) {
-                    if (fireworksEffect == null) {
-                        fireworksEffect = new FireworksEffect();
-                    }
-                } else if (Theme.canStartHolidayAnimation()) {
+                if (Theme.canStartHolidayAnimation()) {
                     if (snowflakesEffect == null) {
                         snowflakesEffect = new SnowflakesEffect();
                     }
