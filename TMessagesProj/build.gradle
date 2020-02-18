@@ -32,15 +32,14 @@ dependencies {
     implementation 'com.stripe:stripe-android:2.0.2'
     implementation 'com.google.code.gson:gson:2.8.6'
     implementation files('libs/libgsaverification-client.aar')
-    implementation "com.microsoft.appcenter:appcenter-analytics:2.5.1"
 }
 
 android {
     compileSdkVersion 29
     buildToolsVersion '29.0.2'
-    //ndkVersion "20.0.5594570"
+    ndkVersion "20.0.5594570"
 
-    defaultConfig.applicationId = "tw.nekomimi.nekogram"
+    defaultConfig.applicationId = "io.github.cool2645.nekolite"
 
     sourceSets.main.jniLibs.srcDirs = ['./jni/']
 
@@ -83,10 +82,6 @@ android {
             keyPassword pwd != null ? pwd : System.getenv("ALIAS_PASS")
         }
         debug {
-            storeFile file("config/release.keystore")
-            storePassword keystorePwd != null ? keystorePwd : System.getenv("KEYSTORE_PASS")
-            keyAlias alias != null ? alias : System.getenv("ALIAS_NAME")
-            keyPassword pwd != null ? pwd : System.getenv("ALIAS_PASS")
         }
     }
 
@@ -303,7 +298,7 @@ android {
 
     applicationVariants.all { variant ->
         variant.outputs.all { output ->
-            outputFileName = "Nekogram-${defaultConfig.versionName}-${defaultConfig.versionCode / 10}-${variant.productFlavors.get(0).name}-${buildType.name}.apk"
+            outputFileName = "Nekogram-Lite-${defaultConfig.versionName}-${defaultConfig.versionCode / 10}-${variant.productFlavors.get(0).name}-${buildType.name}.apk"
             output.getProcessManifestProvider().get().doLast {
                 def abiVersion = variant.productFlavors.get(0).abiVersionCode
 
@@ -333,7 +328,7 @@ android {
 
     defaultConfig {
         minSdkVersion 16
-        targetSdkVersion 28
+        targetSdkVersion 29
         versionName "5.15.0"
 
         vectorDrawables.generatedDensities = ['mdpi', 'hdpi', 'xhdpi', 'xxhdpi']

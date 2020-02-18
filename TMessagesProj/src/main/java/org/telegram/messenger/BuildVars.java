@@ -21,12 +21,12 @@ public class BuildVars {
     public static boolean TON_WALLET_STANDALONE = false;
     public static int BUILD_VERSION = 1869;
     public static String BUILD_VERSION_STRING = "5.15.0";
-    public static int APP_ID = 336779; //obtain your own APP_ID at https://core.telegram.org/api/obtaining_api_id
-    public static String APP_HASH = "b91eefacc86747c068c8d8a16b41500d"; //obtain your own APP_HASH at https://core.telegram.org/api/obtaining_api_id
+    public static int APP_ID = 1056817; //obtain your own APP_ID at https://core.telegram.org/api/obtaining_api_id
+    public static String APP_HASH = "31511ac2e6289df4bc7d33a880e99475"; //obtain your own APP_HASH at https://core.telegram.org/api/obtaining_api_id
     public static String HOCKEY_APP_HASH = "your-hockeyapp-api-key-here";
     public static String HOCKEY_APP_HASH_DEBUG = "your-hockeyapp-api-key-here";
     public static String SMS_HASH = ""; //https://developers.google.com/identity/sms-retriever/overview
-    public static String PLAYSTORE_APP_URL = "https://play.google.com/store/apps/details?id=tw.nekomimi.nekogram";
+    public static String PLAYSTORE_APP_URL = "https://play.google.com/store/apps/details?id=io.github.cool2645.nekolite";
 
     static {
         if (ApplicationLoader.applicationContext != null) {
