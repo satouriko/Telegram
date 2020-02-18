@@ -13,29 +13,21 @@ public class NekoConfig {
 
     private static final Object sync = new Object();
     public static boolean useIPv6 = false;
-    public static boolean hidePhone = true;
     public static boolean ignoreBlocked = false;
     public static boolean forceTablet = false;
-    public static int typeface = 0;
     public static int nameOrder = 1;
     public static int mapPreviewProvider = 0;
-    public static boolean transparentStatusBar = false;
     public static boolean residentNotification = false;
-    public static boolean hideProxySponsorChannel = false;
     public static boolean saveCacheToPrivateDirectory = Build.VERSION.SDK_INT >= 24;
-    public static float stickerSize = 14.0f;
     public static boolean unlimitedFavedStickers = false;
 
-    public static boolean showAddToSavedMessages = true;
     public static boolean showReport = false;
     public static boolean showPrPr = false;
     public static boolean showViewHistory = true;
     public static boolean showAdminActions = true;
     public static boolean showChangePermissions = true;
     public static boolean showDeleteDownloadedFile = true;
-    public static boolean showMessageDetails = false;
     public static boolean showTranslate = true;
-    public static boolean showRepeat = true;
 
     public static int eventType = 0;
     public static int actionBarDecoration = 0;
@@ -56,28 +48,20 @@ public class NekoConfig {
                 SharedPreferences preferences = ApplicationLoader.applicationContext.getSharedPreferences("nekoconfing", Context.MODE_PRIVATE);
                 SharedPreferences.Editor editor = preferences.edit();
                 editor.putBoolean("useIPv6", useIPv6);
-                editor.putBoolean("hidePhone", hidePhone);
                 editor.putBoolean("ignoreBlocked", ignoreBlocked);
                 editor.putBoolean("forceTablet", forceTablet);
-                editor.putInt("typeface", typeface);
                 editor.putInt("nameOrder", nameOrder);
                 editor.putInt("mapPreviewProvider", mapPreviewProvider);
-                editor.putBoolean("transparentStatusBar", transparentStatusBar);
                 editor.putBoolean("residentNotification", residentNotification);
-                editor.putBoolean("hideProxySponsorChannel", hideProxySponsorChannel);
                 editor.putBoolean("saveCacheToPrivateDirectory", saveCacheToPrivateDirectory);
-                editor.putBoolean("showAddToSavedMessages", showAddToSavedMessages);
                 editor.putBoolean("showReport", showReport);
                 editor.putBoolean("showPrPr", showPrPr);
                 editor.putBoolean("showViewHistory", showViewHistory);
                 editor.putBoolean("showAdminActions", showAdminActions);
                 editor.putBoolean("showChangePermissions", showChangePermissions);
                 editor.putBoolean("showDeleteDownloadedFile", showDeleteDownloadedFile);
-                editor.putBoolean("showMessageDetails", showMessageDetails);
                 editor.putBoolean("showTranslate", showTranslate);
-                editor.putBoolean("showRepeat", showRepeat);
                 editor.putBoolean("newYear", newYear);
-                editor.putFloat("stickerSize", stickerSize);
                 editor.putBoolean("unlimitedFavedStickers", unlimitedFavedStickers);
                 editor.putInt("translationProvider", translationProvider);
                 editor.putInt("eventType", eventType);
@@ -98,42 +82,26 @@ public class NekoConfig {
 
             SharedPreferences preferences = ApplicationLoader.applicationContext.getSharedPreferences("nekoconfig", Activity.MODE_PRIVATE);
             useIPv6 = preferences.getBoolean("useIPv6", false);
-            hidePhone = preferences.getBoolean("hidePhone", true);
             ignoreBlocked = preferences.getBoolean("ignoreBlocked", false);
             forceTablet = preferences.getBoolean("forceTablet", false);
-            typeface = preferences.getInt("typeface", 0);
             nameOrder = preferences.getInt("nameOrder", 1);
             mapPreviewProvider = preferences.getInt("mapPreviewProvider", 0);
-            transparentStatusBar = preferences.getBoolean("transparentStatusBar", false);
             residentNotification = preferences.getBoolean("residentNotification", false);
-            hideProxySponsorChannel = preferences.getBoolean("hideProxySponsorChannel", false);
             saveCacheToPrivateDirectory = preferences.getBoolean("saveCacheToPrivateDirectory", Build.VERSION.SDK_INT >= 24);
-            showAddToSavedMessages = preferences.getBoolean("showAddToSavedMessages", true);
             showReport = preferences.getBoolean("showReport", false);
             showPrPr = preferences.getBoolean("showPrPr", false);
             showViewHistory = preferences.getBoolean("showViewHistory", true);
             showAdminActions = preferences.getBoolean("showAdminActions", true);
             showChangePermissions = preferences.getBoolean("showChangePermissions", true);
             showDeleteDownloadedFile = preferences.getBoolean("showDeleteDownloadedFile", true);
-            showMessageDetails = preferences.getBoolean("showMessageDetails", false);
             showTranslate = preferences.getBoolean("showTranslate", true);
-            showRepeat = preferences.getBoolean("showRepeat", true);
             eventType = preferences.getInt("eventType", 0);
             actionBarDecoration = preferences.getInt("actionBarDecoration", 0);
             newYear = preferences.getBoolean("newYear", false);
-            stickerSize = preferences.getFloat("stickerSize", 14.0f);
             unlimitedFavedStickers = preferences.getBoolean("unlimitedFavedStickers", false);
             translationProvider = preferences.getInt("translationProvider", 1);
             configLoaded = true;
         }
-    }
-
-    public static void toggleShowAddToSavedMessages() {
-        showAddToSavedMessages = !showAddToSavedMessages;
-        SharedPreferences preferences = ApplicationLoader.applicationContext.getSharedPreferences("nekoconfig", Activity.MODE_PRIVATE);
-        SharedPreferences.Editor editor = preferences.edit();
-        editor.putBoolean("showAddToSavedMessages", showAddToSavedMessages);
-        editor.commit();
     }
 
     public static void toggleShowReport() {
@@ -185,35 +153,11 @@ public class NekoConfig {
         editor.commit();
     }
 
-    public static void toggleShowMessageDetails() {
-        showMessageDetails = !showMessageDetails;
-        SharedPreferences preferences = ApplicationLoader.applicationContext.getSharedPreferences("nekoconfig", Activity.MODE_PRIVATE);
-        SharedPreferences.Editor editor = preferences.edit();
-        editor.putBoolean("showMessageDetails", showMessageDetails);
-        editor.commit();
-    }
-
-    public static void toggleShowRepeat() {
-        showRepeat = !showRepeat;
-        SharedPreferences preferences = ApplicationLoader.applicationContext.getSharedPreferences("nekoconfig", Activity.MODE_PRIVATE);
-        SharedPreferences.Editor editor = preferences.edit();
-        editor.putBoolean("showRepeat", showRepeat);
-        editor.commit();
-    }
-
     public static void toggleIPv6() {
         useIPv6 = !useIPv6;
         SharedPreferences preferences = ApplicationLoader.applicationContext.getSharedPreferences("nekoconfig", Activity.MODE_PRIVATE);
         SharedPreferences.Editor editor = preferences.edit();
         editor.putBoolean("useIPv6", useIPv6);
-        editor.commit();
-    }
-
-    public static void toggleHidePhone() {
-        hidePhone = !hidePhone;
-        SharedPreferences preferences = ApplicationLoader.applicationContext.getSharedPreferences("nekoconfig", Activity.MODE_PRIVATE);
-        SharedPreferences.Editor editor = preferences.edit();
-        editor.putBoolean("hidePhone", hidePhone);
         editor.commit();
     }
 
@@ -233,14 +177,6 @@ public class NekoConfig {
         editor.commit();
     }
 
-    public static void toggleTypeface() {
-        typeface = typeface == 0 ? 1 : 0;
-        SharedPreferences preferences = ApplicationLoader.applicationContext.getSharedPreferences("nekoconfig", Activity.MODE_PRIVATE);
-        SharedPreferences.Editor editor = preferences.edit();
-        editor.putInt("typeface", typeface);
-        editor.commit();
-    }
-
     public static void setNameOrder(int order) {
         nameOrder = order;
         SharedPreferences preferences = ApplicationLoader.applicationContext.getSharedPreferences("nekoconfig", Activity.MODE_PRIVATE);
@@ -257,14 +193,6 @@ public class NekoConfig {
         editor.commit();
     }
 
-    public static void toggleTransparentStatusBar() {
-        transparentStatusBar = !transparentStatusBar;
-        SharedPreferences preferences = ApplicationLoader.applicationContext.getSharedPreferences("nekoconfig", Activity.MODE_PRIVATE);
-        SharedPreferences.Editor editor = preferences.edit();
-        editor.putBoolean("transparentStatusBar", transparentStatusBar);
-        editor.commit();
-    }
-
     public static void toggleResidentNotification() {
         residentNotification = !residentNotification;
         SharedPreferences preferences = ApplicationLoader.applicationContext.getSharedPreferences("nekoconfig", Activity.MODE_PRIVATE);
@@ -277,14 +205,6 @@ public class NekoConfig {
         } else {
             ApplicationLoader.applicationContext.stopService(duangIntent);
         }
-    }
-
-    public static void toggleHideProxySponsorChannel() {
-        hideProxySponsorChannel = !hideProxySponsorChannel;
-        SharedPreferences preferences = ApplicationLoader.applicationContext.getSharedPreferences("nekoconfig", Activity.MODE_PRIVATE);
-        SharedPreferences.Editor editor = preferences.edit();
-        editor.putBoolean("hideProxySponsorChannel", hideProxySponsorChannel);
-        editor.commit();
     }
 
     public static void toggleSaveCacheToPrivateDirectory() {
@@ -332,14 +252,6 @@ public class NekoConfig {
         SharedPreferences preferences = ApplicationLoader.applicationContext.getSharedPreferences("nekoconfig", Activity.MODE_PRIVATE);
         SharedPreferences.Editor editor = preferences.edit();
         editor.putBoolean("showTranslate", showTranslate);
-        editor.commit();
-    }
-
-    public static void setStickerSize(float size) {
-        stickerSize = size;
-        SharedPreferences preferences = ApplicationLoader.applicationContext.getSharedPreferences("nekoconfig", Activity.MODE_PRIVATE);
-        SharedPreferences.Editor editor = preferences.edit();
-        editor.putFloat("stickerSize", stickerSize);
         editor.commit();
     }
 

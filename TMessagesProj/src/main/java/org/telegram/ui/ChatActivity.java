@@ -201,7 +201,6 @@ import org.telegram.ui.Components.URLSpanUserMention;
 import org.telegram.ui.Components.UndoView;
 import org.telegram.ui.Components.voip.VoIPHelper;
 
-import tw.nekomimi.nekogram.MessageDetailsActivity;
 import tw.nekomimi.nekogram.MessageHelper;
 import tw.nekomimi.nekogram.NekoConfig;
 import tw.nekomimi.nekogram.translator.Translator;
@@ -13959,14 +13958,9 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
                             items.add(LocaleController.getString("NoQuoteForward", R.string.NoQuoteForward));
                             options.add(95);
                             icons.add(R.drawable.msg_forward);
-                            if (!UserObject.isUserSelf(currentUser) && NekoConfig.showAddToSavedMessages) {
-                                items.add(LocaleController.getString("AddToSavedMessages", R.string.AddToSavedMessages));
-                                options.add(93);
-                                icons.add(R.drawable.menu_saved);
-                            }
                             boolean allowRepeat = currentUser != null
                                     || (currentChat != null && ChatObject.canSendMessages(currentChat));
-                            if (allowRepeat && NekoConfig.showRepeat) {
+                            if (allowRepeat) {
                                 items.add(LocaleController.getString("Repeat", R.string.Repeat));
                                 options.add(94);
                                 icons.add(R.drawable.msg_repeat);
@@ -13987,11 +13981,6 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
                                 items.add(LocaleController.getString("ViewUserHistory", R.string.ViewHistory));
                                 options.add(90);
                                 icons.add(R.drawable.menu_recent);
-                            }
-                            if (NekoConfig.showMessageDetails) {
-                                items.add(LocaleController.getString("MessageDetails", R.string.MessageDetails));
-                                options.add(89);
-                                icons.add(R.drawable.menu_info);
                             }
                             if (!TextUtils.isEmpty(selectedObject.messageOwner.message) && NekoConfig.showTranslate) {
                                 Matcher matcher = Pattern.compile("\u200C\u200C\\n\\n--------\\n.*\u200C\u200C", Pattern.DOTALL).matcher(selectedObject.messageOwner.message);
@@ -15023,9 +15012,6 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
                     }
                 }
                 break;
-            } case 89: {
-                presentFragment(new MessageDetailsActivity(selectedObject));
-                break;
             } case 90: {
                 TLRPC.User user = MessagesController.getInstance(currentAccount).getUser(selectedObject.messageOwner.from_id);
                 getMediaDataController().searchMessagesInChat("", dialog_id, mergeDialogId, classGuid, 0, user);
@@ -15095,11 +15081,6 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
                     checkAutoDownloadMessage(selectedObject);
                     messageCell.updateButtonState(false, true, false);
                 }
-                break;
-            } case 93: {
-                ArrayList<MessageObject> messages =  new ArrayList<>();
-                messages.add(selectedObject);
-                forwardMessages(messages, false, true, 0, UserConfig.getInstance(currentAccount).getClientUserId());
                 break;
             } case 94: {
                 ArrayList<MessageObject> messages =  new ArrayList<>();

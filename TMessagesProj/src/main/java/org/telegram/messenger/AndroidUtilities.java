@@ -1091,24 +1091,6 @@ public class AndroidUtilities {
 
     public static Typeface getTypeface(String assetPath) {
         synchronized (typefaceCache) {
-            if (NekoConfig.typeface == 1) {
-                if (assetPath.contains("medium") && assetPath.contains("italic")) {
-                    return Typeface.create((Typeface) null, Typeface.BOLD_ITALIC);
-                }
-                if (assetPath.contains("medium")) {
-                    return Typeface.create((Typeface) null, Typeface.BOLD);
-                }
-                if (assetPath.contains("italic")) {
-                    return Typeface.create((Typeface) null, Typeface.ITALIC);
-                }
-                if (assetPath.contains("mono")) {
-                    return Typeface.MONOSPACE;
-                }
-                if (assetPath.contains("mw_bold")) {
-                    return Typeface.create("serif", Typeface.BOLD);
-                }
-                //return Typeface.create((Typeface) null, Typeface.NORMAL);
-            }
             if (!typefaceCache.containsKey(assetPath)) {
                 try {
                     Typeface t;
@@ -3208,21 +3190,13 @@ public class AndroidUtilities {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             final View decorView = window.getDecorView();
             int flags = decorView.getSystemUiVisibility();
-            if (NekoConfig.transparentStatusBar) {
-                window.setStatusBarColor(Color.TRANSPARENT);
-            }
+            window.setStatusBarColor(Color.TRANSPARENT);
             if (enable) {
-                if (!NekoConfig.transparentStatusBar) {
-                    window.setStatusBarColor(0x0f000000);
-                }
                 if ((flags & View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR) == 0) {
                     flags |= View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;
                     decorView.setSystemUiVisibility(flags);
                 }
             } else {
-                if (!NekoConfig.transparentStatusBar) {
-                    window.setStatusBarColor(0x33000000);
-                }
                 if ((flags & View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR) != 0) {
                     flags &= ~View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;
                     decorView.setSystemUiVisibility(flags);

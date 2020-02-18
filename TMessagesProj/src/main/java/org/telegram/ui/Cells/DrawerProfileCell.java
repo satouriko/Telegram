@@ -261,9 +261,7 @@ public class DrawerProfileCell extends FrameLayout {
         accountsShowed = accounts;
         setArrowState(false);
         nameTextView.setText(UserObject.getUserName(user));
-        if (!NekoConfig.hidePhone) {
-            phoneTextView.setText(PhoneFormat.getInstance().format("+" + user.phone));
-        }
+        phoneTextView.setText(PhoneFormat.getInstance().format("+" + user.phone));
         AvatarDrawable avatarDrawable = new AvatarDrawable(user);
         avatarDrawable.setColor(Theme.getColor(Theme.key_avatar_backgroundInProfileBlue));
         avatarImageView.setImage(ImageLocation.getForUser(user, false), "50_50", avatarDrawable, user);

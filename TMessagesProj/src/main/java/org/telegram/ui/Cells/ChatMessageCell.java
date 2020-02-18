@@ -4213,9 +4213,9 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                     float maxHeight;
                     float maxWidth;
                     if (AndroidUtilities.isTablet()) {
-                        maxHeight = maxWidth = AndroidUtilities.getMinTabletSide() * (0.4f + (NekoConfig.stickerSize - 14.0f) / 40);
+                        maxHeight = maxWidth = AndroidUtilities.getMinTabletSide() * 0.4f;
                     } else {
-                        maxHeight = maxWidth = Math.min(AndroidUtilities.displaySize.x, AndroidUtilities.displaySize.y) * (0.5f + (NekoConfig.stickerSize - 14.0f) / 30);
+                        maxHeight = maxWidth = Math.min(AndroidUtilities.displaySize.x, AndroidUtilities.displaySize.y) * 0.5f;
                     }
                     String filter;
                     if (messageObject.isAnimatedEmoji()) {
