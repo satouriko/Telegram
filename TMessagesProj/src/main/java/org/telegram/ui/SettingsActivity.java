@@ -2390,7 +2390,7 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
                                 abi = "universal " + Build.CPU_ABI + " " + Build.CPU_ABI2;
                                 break;
                         }
-                        cell.setText(String.format("%1$s %2$s", LocaleController.getString("Nekogram", R.string.Nekogram), String.format(Locale.US, "v%s (%d) %s", pInfo.versionName, code, abi)));
+                        cell.setText(String.format("%1$s %2$s", LocaleController.getString("NekogramLite", R.string.NekogramLite), String.format(Locale.US, "v%s (%d) %s", pInfo.versionName, code, abi)));
                     } catch (Exception e) {
                         FileLog.e(e);
                     }
