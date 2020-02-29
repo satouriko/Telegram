@@ -1700,7 +1700,7 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
             stringBuilder = new SpannableStringBuilder(LocaleController.getString("Mono", R.string.Mono));
             stringBuilder.setSpan(new TypefaceSpan(Typeface.MONOSPACE), 0, stringBuilder.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
             editTextItem.addSubItem(text_mono, stringBuilder);
-            if (true || currentEncryptedChat == null || currentEncryptedChat != null && AndroidUtilities.getPeerLayerVersion(currentEncryptedChat.layer) >= 101) {
+            if (currentEncryptedChat == null || currentEncryptedChat != null && AndroidUtilities.getPeerLayerVersion(currentEncryptedChat.layer) >= 101) {
                 stringBuilder = new SpannableStringBuilder(LocaleController.getString("Strike", R.string.Strike));
                 TextStyleSpan.TextStyleRun run = new TextStyleSpan.TextStyleRun();
                 run.flags |= TextStyleSpan.FLAG_STYLE_STRIKE;
