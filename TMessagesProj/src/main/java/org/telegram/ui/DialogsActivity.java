@@ -610,16 +610,14 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
                         childTop = commentView.getBottom();
                     }
                 } else if (child == filterTabsView) {
-                    childTop = actionBar.getMeasuredHeight();
+                    childTop = onlySelect ? 0 : actionBar.getMeasuredHeight();
                 } else if (child == searchListView || child == searchEmptyView) {
                     childTop = (onlySelect ? 0 : actionBar.getMeasuredHeight()) + topPadding;
                 } else if (child instanceof ViewPage) {
-                    if (!onlySelect) {
-                        if (filterTabsView != null && filterTabsView.getVisibility() == VISIBLE) {
-                            childTop = AndroidUtilities.dp(44);
-                        } else {
-                            childTop = actionBar.getMeasuredHeight();
-                        }
+                    if (filterTabsView != null && filterTabsView.getVisibility() == VISIBLE) {
+                        childTop = AndroidUtilities.dp(44);
+                    } else if (!onlySelect) {
+                        childTop = actionBar.getMeasuredHeight();
                     }
                     childTop += topPadding;
                 } else if (child instanceof FragmentContextView) {
@@ -1640,7 +1638,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
             scrollToTop();
         });
 
-        if (initialDialogsType == 0 && folderId == 0 && !onlySelect) {
+        if (initialDialogsType == 3 || initialDialogsType == 0 && folderId == 0 && !onlySelect) {
             scrimPaint = new Paint() {
                 @Override
                 public void setAlpha(int a) {
@@ -2075,7 +2073,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
         ContentView contentView = new ContentView(context);
         fragmentView = contentView;
 
-        int pagesCount = folderId == 0 && initialDialogsType == 0 && !onlySelect ? 2 : 1;
+        int pagesCount = initialDialogsType == 3 || (folderId == 0 && initialDialogsType == 0 && !onlySelect) ? 2 : 1;
         viewPages = new ViewPage[pagesCount];
         for (int a = 0; a < pagesCount; a++) {
             final ViewPage viewPage = new ViewPage(context) {
@@ -2388,7 +2386,8 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
                             }
                         }
                     }
-                    if (filterTabsView != null && filterTabsView.getVisibility() == View.VISIBLE && recyclerView == viewPages[0].listView && !searching && !actionBar.isActionModeShowed() && !disableActionBarScrolling) {
+                    boolean f1flag = initialDialogsType == 0 && folderId == 0 && !onlySelect;
+                    if (f1flag && filterTabsView != null && filterTabsView.getVisibility() == View.VISIBLE && recyclerView == viewPages[0].listView && !searching && !actionBar.isActionModeShowed() && !disableActionBarScrolling) {
                         if (dy > 0 && hasHiddenArchive() && viewPages[0].dialogsType == 0) {
                             View child = recyclerView.getChildAt(0);
                             if (child != null) {
