@@ -22,12 +22,6 @@
     <string name="Repeat">Repeat</string>
     <string name="CreateMention">Create Mention</string>
     <string name="ForceTabletMode">Force tablet mode*</string>
-    <string name="All">All</string>
-    <string name="Users">Users</string>
-    <string name="Groups">Groups</string>
-    <string name="Channels">Channels</string>
-    <string name="Bots">Bots</string>
-    <string name="Admins">Admin</string>
     <string name="Prpr">Peropero</string>
     <string name="EnableResidentNotification">Show a resident notification</string>
     <string name="DisableResidentNotification">Disable resident notification</string>

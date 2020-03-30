@@ -18,12 +18,6 @@
     <string name="Repeat">复读</string>
     <string name="CreateMention">创建\@</string>
     <string name="ForceTabletMode">假装是平板*</string>
-    <string name="All">全部</string>
-    <string name="Users">用户</string>
-    <string name="Groups">群组</string>
-    <string name="Channels">频道</string>
-    <string name="Bots">机器人</string>
-    <string name="Admins">管理的</string>
     <string name="Prpr">ペロペロ</string>
     <string name="EnableResidentNotification">请让猫咪住在通知栏里吧</string>
     <string name="DisableResidentNotification">果然通知栏还是太挤了</string>

@@ -19,12 +19,6 @@
     <string name="Repeat">繰り返す</string>
     <string name="CreateMention">アットユーザー</string>
     <string name="ForceTabletMode">タブレットモードを強制する*</string>
-    <string name="All">すべて</string>
-    <string name="Users">ユーザー</string>
-    <string name="Groups">グループ</string>
-    <string name="Channels">チャンネル</string>
-    <string name="Bots">ボット</string>
-    <string name="Admins">マネージド</string>
     <string name="Prpr">ペロペロ</string>
     <string name="EnableResidentNotification">常駐通知を表示する</string>
     <string name="DisableResidentNotification">常駐通知を無効にする</string>

@@ -18,12 +18,6 @@
     <string name="Repeat">複讀</string>
     <string name="CreateMention">提及使用者</string>
     <string name="ForceTabletMode">強制平板模式*</string>
-    <string name="All">全部</string>
-    <string name="Users">用戶</string>
-    <string name="Groups">群組</string>
-    <string name="Channels">頻道</string>
-    <string name="Bots">機器人</string>
-    <string name="Admins">管理中</string>
     <string name="Prpr">ペロペロ</string>
     <string name="EnableResidentNotification">請讓貓咪住在通知列裡吧</string>
     <string name="DisableResidentNotification">果然通知列還是太擠了</string>

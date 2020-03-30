@@ -19,12 +19,6 @@
     <string name="AddToSavedMessages">拿去自嗨</string>
     <string name="CreateMention">提及使用者</string>
     <string name="ForceTabletMode">強制平板模式*</string>
-    <string name="All">全部</string>
-    <string name="Users">用户</string>
-    <string name="Groups">羣組</string>
-    <string name="Channels">頻道</string>
-    <string name="Bots">機器人</string>
-    <string name="Admins">管理的</string>
     <string name="Prpr">ペロペロ</string>
     <string name="EnableResidentNotification">請讓貓咪住在通知欄裏吧</string>
     <string name="DisableResidentNotification">果然通知欄還是太擠了</string>
