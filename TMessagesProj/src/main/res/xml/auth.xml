@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 
 <account-authenticator xmlns:android="http://schemas.android.com/apk/res/android"
-    android:accountType="io.github.cool2645.nekolite"
+    android:accountType="com.cool2645.nekolite"
     android:icon="@mipmap/ic_launcher"
     android:smallIcon="@mipmap/ic_launcher"
     android:label="@string/AppName"

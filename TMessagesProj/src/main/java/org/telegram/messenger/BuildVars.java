@@ -26,7 +26,7 @@ public class BuildVars {
     public static String APPCENTER_HASH = "88d8adad-79c7-4ec4-910b-1232c6dec9e0";
     public static String APPCENTER_HASH_DEBUG = "61fdf8d4-d901-4b12-8f6e-e5224ebdaad1";
     public static String SMS_HASH = ""; //https://developers.google.com/identity/sms-retriever/overview
-    public static String PLAYSTORE_APP_URL = "https://play.google.com/store/apps/details?id=io.github.cool2645.nekolite";
+    public static String PLAYSTORE_APP_URL = "";
 
     static {
         if (ApplicationLoader.applicationContext != null) {
