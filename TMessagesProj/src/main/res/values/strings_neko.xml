@@ -49,6 +49,7 @@
     <string name="ProviderGoogleTranslateCN">Google Translate CN</string>
     <string name="ProviderGoogleTranslateCNWeb">Google Translate CN (Web)</string>
     <string name="ProviderBaiduFanyiWeb">Baidu Translate (Web)</string>
+    <string name="ProviderDeepLWeb">DeepL Translator (Web)</string>
     <string name="TranslateApiUnsupported">The translation provider you selected don\'t support your language</string>
     <string name="ProviderLingocloud">Lingocloud</string>
     <string name="UndoTranslate">Undo translate</string>

@@ -45,6 +45,7 @@
     <string name="ProviderGoogleTranslateCN">Google 中国翻译</string>
     <string name="ProviderGoogleTranslateCNWeb">Google 中国翻译 (Web)</string>
     <string name="ProviderBaiduFanyiWeb">百度翻译 (Web)</string>
+    <string name="ProviderDeepLWeb">DeepL 翻译 (Web)</string>
     <string name="TranslateApiUnsupported">您选择的翻译源不支持您的语言</string>
     <string name="ProviderLingocloud">彩云小译</string>
     <string name="UndoTranslate">撤销翻译</string>
