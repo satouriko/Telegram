@@ -56,4 +56,5 @@
     <string name="CopyDetails">Copy Details</string>
     <string name="BotToken">Token</string>
     <string name="LoginExperimentAbout">Do not change the default settings in this list, unless you know what you are doing!</string>
+    <string name="RearVideoMessages">Use rear camera in video messages</string>
 </resources>

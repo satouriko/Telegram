@@ -53,4 +53,5 @@
     <string name="CopyDetails">複製詳細信息</string>
     <string name="BotToken">令牌</string>
     <string name="LoginExperimentAbout">不要修改此列表中的默認設置，除非你知道自己在做什麼！</string>
+    <string name="RearVideoMessages">視頻消息中使用後置攝像頭</string>
 </resources>

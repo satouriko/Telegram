@@ -76,6 +76,7 @@ public class NekoSettingsActivity extends BaseFragment {
     private int ignoreBlockedRow;
     private int saveCacheToPrivateDirectoryRow;
     private int pauseMusicOnRecordRow;
+    private int rearVideoMessagesRow;
     private int mapPreviewRow;
     private int translationProviderRow;
     private int messageMenuRow;
@@ -276,6 +277,11 @@ public class NekoSettingsActivity extends BaseFragment {
                 if (SharedConfig.smoothKeyboard && getParentActivity() != null) {
                     getParentActivity().getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_PAN);
                 }
+            } else if (position == rearVideoMessagesRow) {
+                NekoConfig.toggleRearVideoMessages();
+                if (view instanceof TextCheckCell) {
+                    ((TextCheckCell) view).setChecked(NekoConfig.rearVideoMessages);
+                }
             }
 
         });
@@ -302,6 +308,7 @@ public class NekoSettingsActivity extends BaseFragment {
         ignoreBlockedRow = rowCount++;
         saveCacheToPrivateDirectoryRow = Build.VERSION.SDK_INT >= 24 ? rowCount++ : -1;
         pauseMusicOnRecordRow = rowCount++;
+        rearVideoMessagesRow = rowCount++;
         mapPreviewRow = rowCount++;
         messageMenuRow = rowCount++;
         translationProviderRow = rowCount++;
@@ -594,6 +601,8 @@ public class NekoSettingsActivity extends BaseFragment {
                         textCell.setTextAndCheck(LocaleController.getString("DebugMenuEnablePauseMusic", R.string.DebugMenuEnablePauseMusic), SharedConfig.pauseMusicOnRecord, true);
                     } else if (position == smoothKeyboardRow) {
                         textCell.setTextAndCheck(LocaleController.getString("DebugMenuEnableSmoothKeyboard", R.string.DebugMenuEnableSmoothKeyboard), SharedConfig.smoothKeyboard, true);
+                    } else if (position == rearVideoMessagesRow) {
+                        textCell.setTextAndCheck(LocaleController.getString("RearVideoMessages", R.string.RearVideoMessages), NekoConfig.rearVideoMessages, true);
                     }
                     break;
                 }
@@ -624,7 +633,7 @@ public class NekoSettingsActivity extends BaseFragment {
             return position == ignoreBlockedRow || position == useSystemEmojiRow || position == ipv6Row ||
                     position == forceTabletRow || position == mapPreviewRow ||
                     position == saveCacheToPrivateDirectoryRow || (position == disableFilteringRow && sensitiveCanChange) ||
-                    position == unlimitedFavedStickersRow || position == messageMenuRow ||
+                    position == unlimitedFavedStickersRow || position == messageMenuRow || position == rearVideoMessagesRow ||
                     position == translationProviderRow || position == smoothKeyboardRow || position == pauseMusicOnRecordRow;
         }
 
@@ -673,7 +682,8 @@ public class NekoSettingsActivity extends BaseFragment {
             } else if (position == ipv6Row || position == ignoreBlockedRow ||
                     position == useSystemEmojiRow || position == forceTabletRow ||
                     position == saveCacheToPrivateDirectoryRow || position == unlimitedFavedStickersRow ||
-                    position == disableFilteringRow || position == smoothKeyboardRow || position == pauseMusicOnRecordRow) {
+                    position == disableFilteringRow || position == smoothKeyboardRow ||
+                    position == pauseMusicOnRecordRow|| position == rearVideoMessagesRow) {
                 return 3;
             } else if (position == connectionRow || position == chatRow || position == experimentRow) {
                 return 4;

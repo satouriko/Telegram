@@ -15,6 +15,7 @@ public class NekoConfig {
     public static boolean useIPv6 = false;
     public static boolean ignoreBlocked = false;
     public static boolean forceTablet = false;
+    public static boolean rearVideoMessages = false;
     public static int mapPreviewProvider = 0;
     public static boolean residentNotification = false;
     public static boolean saveCacheToPrivateDirectory = Build.VERSION.SDK_INT >= 24;
@@ -55,6 +56,7 @@ public class NekoConfig {
                 editor.putBoolean("showDeleteDownloadedFile", showDeleteDownloadedFile);
                 editor.putBoolean("showTranslate", showTranslate);
                 editor.putBoolean("unlimitedFavedStickers", unlimitedFavedStickers);
+                editor.putBoolean("rearVideoMessages", rearVideoMessages);
                 editor.putInt("translationProvider", translationProvider);
 
                 editor.commit();
@@ -86,6 +88,7 @@ public class NekoConfig {
             showTranslate = preferences.getBoolean("showTranslate", false);
             unlimitedFavedStickers = preferences.getBoolean("unlimitedFavedStickers", false);
             translationProvider = preferences.getInt("translationProvider", 1);
+            rearVideoMessages = preferences.getBoolean("rearVideoMessages", false);
             configLoaded = true;
         }
     }
@@ -217,4 +220,11 @@ public class NekoConfig {
         editor.commit();
     }
 
+    public static void toggleRearVideoMessages() {
+        rearVideoMessages = !rearVideoMessages;
+        SharedPreferences preferences = ApplicationLoader.applicationContext.getSharedPreferences("nekoconfig", Activity.MODE_PRIVATE);
+        SharedPreferences.Editor editor = preferences.edit();
+        editor.putBoolean("rearVideoMessages", rearVideoMessages);
+        editor.commit();
+    }
 }
