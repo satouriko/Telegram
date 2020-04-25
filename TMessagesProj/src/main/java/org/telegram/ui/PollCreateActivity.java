@@ -38,14 +38,18 @@ import org.telegram.ui.Cells.TextCell;
 import org.telegram.ui.Cells.TextCheckCell;
 import org.telegram.ui.Cells.TextInfoPrivacyCell;
 import org.telegram.ui.Components.AlertsCreator;
+import org.telegram.ui.Components.ChatAttachAlertPollLayout;
 import org.telegram.ui.Components.CombinedDrawable;
 import org.telegram.ui.Components.EditTextBoldCursor;
 import org.telegram.ui.Components.HintView;
 import org.telegram.ui.Components.LayoutHelper;
 import org.telegram.ui.Components.RecyclerListView;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 
+import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.DefaultItemAnimator;
 import androidx.recyclerview.widget.ItemTouchHelper;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -63,6 +67,7 @@ public class PollCreateActivity extends BaseFragment {
     private boolean[] answersChecks = new boolean[10];
     private int answersCount = 1;
     private String questionString;
+    private String solutionString;
     private boolean anonymousPoll = true;
     private boolean multipleChoise;
     private boolean quizPoll;
@@ -75,6 +80,8 @@ public class PollCreateActivity extends BaseFragment {
 
     private int questionHeaderRow;
     private int questionRow;
+    private int solutionRow;
+    private int solutionInfoRow;
     private int questionSectionRow;
     private int answerHeaderRow;
     private int answerStartRow;
@@ -86,9 +93,6 @@ public class PollCreateActivity extends BaseFragment {
     private int quizRow;
     private int settingsSectionRow;
     private int rowCount;
-
-    private static final int MAX_QUESTION_LENGTH = 255;
-    private static final int MAX_ANSWER_LENGTH = 100;
 
     private static final int done_button = 1;
 
@@ -163,6 +167,12 @@ public class PollCreateActivity extends BaseFragment {
     }
 
     @Override
+    public void onFragmentDestroy() {
+        super.onFragmentDestroy();
+        AndroidUtilities.removeAdjustResize(getParentActivity(), classGuid, true);
+    }
+
+    @Override
     public View createView(Context context) {
         actionBar.setBackButtonImage(R.drawable.ic_ab_back);
         if (quizOnly == 1) {
@@ -200,6 +210,10 @@ public class PollCreateActivity extends BaseFragment {
                     poll.poll.quiz = quizPoll;
                     poll.poll.public_voters = !anonymousPoll;
                     poll.poll.question = getFixedString(questionString);
+                    /*poll.poll.close_period = 20;
+                    poll.poll.close_date = getConnectionsManager().getCurrentTime() + 20;
+                    poll.poll.flags |= 16;
+                    poll.poll.flags |= 32;*/
                     SerializedData serializedData = new SerializedData(10);
                     for (int a = 0; a < answers.length; a++) {
                         if (TextUtils.isEmpty(getFixedString(answers[a]))) {
@@ -217,6 +231,10 @@ public class PollCreateActivity extends BaseFragment {
                     HashMap<String, String> params = new HashMap<>();
                     params.put("answers", Utilities.bytesToHex(serializedData.toByteArray()));
                     poll.results = new TLRPC.TL_pollResults();
+                    poll.results.solution = getFixedString(solutionString);
+                    if (!TextUtils.isEmpty(poll.results.solution)) {
+                        poll.results.flags |= 16;
+                    }
                     if (parentFragment.isInScheduleMode()) {
                         AlertsCreator.createScheduleDatePickerDialog(getParentActivity(), parentFragment.getDialogId(), (notify, scheduleDate) -> {
                             delegate.sendPoll(poll, params, notify, scheduleDate);
@@ -253,16 +271,6 @@ public class PollCreateActivity extends BaseFragment {
                 rectangle.bottom += AndroidUtilities.dp(60);
                 return super.requestChildRectangleOnScreen(child, rectangle, immediate);
             }
-
-            @Override
-            protected void onMeasure(int widthSpec, int heightSpec) {
-                super.onMeasure(widthSpec, heightSpec);
-            }
-
-            @Override
-            public void requestLayout() {
-                super.requestLayout();
-            }
         };
         listView.setVerticalScrollBarEnabled(false);
         ((DefaultItemAnimator) listView.getItemAnimator()).setDelayAnimations(false);
@@ -283,19 +291,29 @@ public class PollCreateActivity extends BaseFragment {
                 } else if (position == multipleRow) {
                     checked = multipleChoise = !multipleChoise;
                     if (multipleChoise && quizPoll) {
+                        int prevSolutionRow = solutionRow;
                         quizPoll = false;
+                        updateRows();
                         RecyclerView.ViewHolder holder = listView.findViewHolderForAdapterPosition(quizRow);
                         if (holder != null) {
                             ((TextCheckCell) holder.itemView).setChecked(false);
                         } else {
                             listAdapter.notifyItemChanged(quizRow);
                         }
+                        listAdapter.notifyItemRangeRemoved(prevSolutionRow, 2);
                     }
                 } else {
                     if (quizOnly != 0) {
                         return;
                     }
                     checked = quizPoll = !quizPoll;
+                    int prevSolutionRow = solutionRow;
+                    updateRows();
+                    if (quizPoll) {
+                        listAdapter.notifyItemRangeInserted(solutionRow, 2);
+                    } else {
+                        listAdapter.notifyItemRangeRemoved(prevSolutionRow, 2);
+                    }
                     if (quizPoll && multipleChoise) {
                         multipleChoise = false;
                         RecyclerView.ViewHolder holder = listView.findViewHolderForAdapterPosition(multipleRow);
@@ -337,6 +355,17 @@ public class PollCreateActivity extends BaseFragment {
                 checkDoneButton();
             }
         });
+        listView.setOnScrollListener(new RecyclerView.OnScrollListener() {
+            @Override
+            public void onScrollStateChanged(@NonNull RecyclerView recyclerView, int newState) {
+                super.onScrollStateChanged(recyclerView, newState);
+            }
+
+            @Override
+            public void onScrolled(@NonNull RecyclerView recyclerView, int dx, int dy) {
+                super.onScrolled(recyclerView, dx, dy);
+            }
+        });
 
         hintView = new HintView(context, 4);
         hintView.setText(LocaleController.getString("PollTapToSelect", R.string.PollTapToSelect));
@@ -355,6 +384,7 @@ public class PollCreateActivity extends BaseFragment {
         if (listAdapter != null) {
             listAdapter.notifyDataSetChanged();
         }
+        AndroidUtilities.requestAdjustResize(getParentActivity(), classGuid, true);
     }
 
     private String getFixedString(String text) {
@@ -395,13 +425,15 @@ public class PollCreateActivity extends BaseFragment {
                 }
             }
         }
-        if (TextUtils.isEmpty(getFixedString(questionString)) || questionString.length() > MAX_QUESTION_LENGTH) {
+        if (!TextUtils.isEmpty(getFixedString(solutionString)) && solutionString.length() > ChatAttachAlertPollLayout.MAX_SOLUTION_LENGTH) {
+            enabled = false;
+        } else if (TextUtils.isEmpty(getFixedString(questionString)) || questionString.length() > ChatAttachAlertPollLayout.MAX_QUESTION_LENGTH) {
             enabled = false;
         } else {
             int count = 0;
             for (int a = 0; a < answers.length; a++) {
                 if (!TextUtils.isEmpty(getFixedString(answers[a]))) {
-                    if (answers[a].length() > MAX_ANSWER_LENGTH) {
+                    if (answers[a].length() > ChatAttachAlertPollLayout.MAX_ANSWER_LENGTH) {
                         count = 0;
                         break;
                     }
@@ -452,6 +484,13 @@ public class PollCreateActivity extends BaseFragment {
             quizRow = -1;
         }
         settingsSectionRow = rowCount++;
+        if (quizPoll) {
+            solutionRow = rowCount++;
+            solutionInfoRow = rowCount++;
+        } else {
+            solutionRow = -1;
+            solutionInfoRow = -1;
+        }
     }
 
     @Override
@@ -485,36 +524,33 @@ public class PollCreateActivity extends BaseFragment {
     }
 
     private void setTextLeft(View cell, int index) {
-        if (cell instanceof HeaderCell) {
-            HeaderCell headerCell = (HeaderCell) cell;
-            if (index == -1) {
-                int left = MAX_QUESTION_LENGTH - (questionString != null ? questionString.length() : 0);
-                if (left <= MAX_QUESTION_LENGTH - MAX_QUESTION_LENGTH * 0.7f) {
-                    headerCell.setText2(String.format("%d", left));
-                    SimpleTextView textView = headerCell.getTextView2();
-                    String key = left < 0 ? Theme.key_windowBackgroundWhiteRedText5 : Theme.key_windowBackgroundWhiteGrayText3;
-                    textView.setTextColor(Theme.getColor(key));
-                    textView.setTag(key);
-                } else {
-                    headerCell.setText2("");
-                }
-            } else {
-                headerCell.setText2("");
-            }
-        } else if (cell instanceof PollEditTextCell) {
-            if (index >= 0) {
-                PollEditTextCell textCell = (PollEditTextCell) cell;
-                int left = MAX_ANSWER_LENGTH - (answers[index] != null ? answers[index].length() : 0);
-                if (left <= MAX_ANSWER_LENGTH - MAX_ANSWER_LENGTH * 0.7f) {
-                    textCell.setText2(String.format("%d", left));
-                    SimpleTextView textView = textCell.getTextView2();
-                    String key = left < 0 ? Theme.key_windowBackgroundWhiteRedText5 : Theme.key_windowBackgroundWhiteGrayText3;
-                    textView.setTextColor(Theme.getColor(key));
-                    textView.setTag(key);
-                } else {
-                    textCell.setText2("");
-                }
-            }
+        if (!(cell instanceof PollEditTextCell)) {
+            return;
+        }
+        PollEditTextCell textCell = (PollEditTextCell) cell;
+        int max;
+        int left;
+        if (index == questionRow) {
+            max = ChatAttachAlertPollLayout.MAX_QUESTION_LENGTH;
+            left = ChatAttachAlertPollLayout.MAX_QUESTION_LENGTH - (questionString != null ? questionString.length() : 0);
+        } else if (index == solutionRow) {
+            max = ChatAttachAlertPollLayout.MAX_SOLUTION_LENGTH;
+            left = ChatAttachAlertPollLayout.MAX_SOLUTION_LENGTH - (solutionString != null ? solutionString.length() : 0);
+        } else if (index >= answerStartRow && index < answerStartRow + answersCount) {
+            index -= answerStartRow;
+            max = ChatAttachAlertPollLayout.MAX_ANSWER_LENGTH;
+            left = ChatAttachAlertPollLayout.MAX_ANSWER_LENGTH - (answers[index] != null ? answers[index].length() : 0);
+        } else {
+            return;
+        }
+        if (left <= max - max * 0.7f) {
+            textCell.setText2(String.format("%d", left));
+            SimpleTextView textView = textCell.getTextView2();
+            String key = left < 0 ? Theme.key_windowBackgroundWhiteRedText5 : Theme.key_windowBackgroundWhiteGrayText3;
+            textView.setTextColor(Theme.getColor(key));
+            textView.setTag(key);
+        } else {
+            textCell.setText2("");
         }
     }
 
@@ -549,12 +585,12 @@ public class PollCreateActivity extends BaseFragment {
                 case 0: {
                     HeaderCell cell = (HeaderCell) holder.itemView;
                     if (position == questionHeaderRow) {
-                        cell.setText(LocaleController.getString("Question", R.string.Question));
+                        cell.setText(LocaleController.getString("PollQuestion", R.string.PollQuestion));
                     } else if (position == answerHeaderRow) {
                         if (quizOnly == 1) {
                             cell.setText(LocaleController.getString("QuizAnswers", R.string.QuizAnswers));
                         } else {
-                            cell.setText(LocaleController.getString("PollOptions", R.string.PollOptions));
+                            cell.setText(LocaleController.getString("AnswerOptions", R.string.AnswerOptions));
                         }
                     } else if (position == settingsHeaderRow) {
                         cell.setText(LocaleController.getString("Settings", R.string.Settings));
@@ -563,9 +599,13 @@ public class PollCreateActivity extends BaseFragment {
                 }
                 case 2: {
                     TextInfoPrivacyCell cell = (TextInfoPrivacyCell) holder.itemView;
+                    cell.setFixedSize(0);
                     cell.setBackgroundDrawable(Theme.getThemedDrawable(mContext, R.drawable.greydivider_bottom, Theme.key_windowBackgroundGrayShadow));
-                    if (position == settingsSectionRow) {
+                    if (position == solutionInfoRow) {
+                        cell.setText(LocaleController.getString("AddAnExplanationInfo", R.string.AddAnExplanationInfo));
+                    } else if (position == settingsSectionRow) {
                         if (quizOnly != 0) {
+                            cell.setFixedSize(12);
                             cell.setText(null);
                         } else {
                             cell.setText(LocaleController.getString("QuizInfo", R.string.QuizInfo));
@@ -607,14 +647,12 @@ public class PollCreateActivity extends BaseFragment {
         @Override
         public void onViewAttachedToWindow(RecyclerView.ViewHolder holder) {
             int viewType = holder.getItemViewType();
-            if (viewType == 0 || viewType == 5) {
-                setTextLeft(holder.itemView, holder.getAdapterPosition() == questionHeaderRow ? -1 : 0);
-            }
             if (viewType == 4) {
                 PollEditTextCell textCell = (PollEditTextCell) holder.itemView;
                 textCell.setTag(1);
                 textCell.setTextAndHint(questionString != null ? questionString : "", LocaleController.getString("QuestionHint", R.string.QuestionHint), false);
                 textCell.setTag(null);
+                setTextLeft(holder.itemView, holder.getAdapterPosition());
             } else if (viewType == 5) {
                 int position = holder.getAdapterPosition();
                 PollEditTextCell textCell = (PollEditTextCell) holder.itemView;
@@ -628,7 +666,13 @@ public class PollCreateActivity extends BaseFragment {
                     AndroidUtilities.showKeyboard(editText);
                     requestFieldFocusAtPosition = -1;
                 }
-                setTextLeft(holder.itemView, position - answerStartRow);
+                setTextLeft(holder.itemView, position);
+            } else if (viewType == 7) {
+                PollEditTextCell textCell = (PollEditTextCell) holder.itemView;
+                textCell.setTag(1);
+                textCell.setTextAndHint(solutionString != null ? solutionString : "", LocaleController.getString("AddAnExplanation", R.string.AddAnExplanation), false);
+                textCell.setTag(null);
+                setTextLeft(holder.itemView, holder.getAdapterPosition());
             }
         }
 
@@ -655,7 +699,7 @@ public class PollCreateActivity extends BaseFragment {
             View view;
             switch (viewType) {
                 case 0:
-                    view = new HeaderCell(mContext, Theme.key_windowBackgroundWhiteBlueHeader, 21, 15, true);
+                    view = new HeaderCell(mContext, Theme.key_windowBackgroundWhiteBlueHeader, 21, 15, false);
                     view.setBackgroundColor(Theme.getColor(Theme.key_windowBackgroundWhite));
                     break;
                 case 1:
@@ -670,6 +714,7 @@ public class PollCreateActivity extends BaseFragment {
                     break;
                 case 4: {
                     PollEditTextCell cell = new PollEditTextCell(mContext, null);
+                    cell.createErrorTextView();
                     cell.setBackgroundColor(Theme.getColor(Theme.key_windowBackgroundWhite));
                     cell.addTextWatcher(new TextWatcher() {
                         @Override
@@ -688,9 +733,9 @@ public class PollCreateActivity extends BaseFragment {
                                 return;
                             }
                             questionString = s.toString();
-                            RecyclerView.ViewHolder holder = listView.findViewHolderForAdapterPosition(questionHeaderRow);
+                            RecyclerView.ViewHolder holder = listView.findViewHolderForAdapterPosition(questionRow);
                             if (holder != null) {
-                                setTextLeft(holder.itemView, -1);
+                                setTextLeft(holder.itemView, questionRow);
                             }
                             checkDoneButton();
                         }
@@ -702,6 +747,37 @@ public class PollCreateActivity extends BaseFragment {
                     view = new TextCheckCell(mContext);
                     view.setBackgroundColor(Theme.getColor(Theme.key_windowBackgroundWhite));
                     break;
+                case 7: {
+                    PollEditTextCell cell = new PollEditTextCell(mContext, null);
+                    cell.createErrorTextView();
+                    cell.setBackgroundColor(Theme.getColor(Theme.key_windowBackgroundWhite));
+                    cell.addTextWatcher(new TextWatcher() {
+                        @Override
+                        public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+
+                        }
+
+                        @Override
+                        public void onTextChanged(CharSequence s, int start, int before, int count) {
+
+                        }
+
+                        @Override
+                        public void afterTextChanged(Editable s) {
+                            if (cell.getTag() != null) {
+                                return;
+                            }
+                            solutionString = s.toString();
+                            RecyclerView.ViewHolder holder = listView.findViewHolderForAdapterPosition(solutionRow);
+                            if (holder != null) {
+                                setTextLeft(holder.itemView, solutionRow);
+                            }
+                            checkDoneButton();
+                        }
+                    });
+                    view = cell;
+                    break;
+                }
                 default: {
                     PollEditTextCell cell = new PollEditTextCell(mContext, v -> {
                         if (v.getTag() != null) {
@@ -758,9 +834,7 @@ public class PollCreateActivity extends BaseFragment {
                         @Override
                         protected void onCheckBoxClick(PollEditTextCell editText, boolean checked) {
                             if (checked && quizPoll) {
-                                for (int a = 0; a < answersChecks.length; a++) {
-                                    answersChecks[a] = false;
-                                }
+                                Arrays.fill(answersChecks, false);
                                 int count = listView.getChildCount();
                                 for (int a = answerStartRow; a < answerStartRow + answersCount; a++) {
                                     RecyclerView.ViewHolder holder = listView.findViewHolderForAdapterPosition(a);
@@ -873,12 +947,14 @@ public class PollCreateActivity extends BaseFragment {
                 return 0;
             } else if (position == questionSectionRow) {
                 return 1;
-            } else if (position == answerSectionRow || position == settingsSectionRow) {
+            } else if (position == answerSectionRow || position == settingsSectionRow || position == solutionInfoRow) {
                 return 2;
             } else if (position == addAnswerRow) {
                 return 3;
             } else if (position == questionRow) {
                 return 4;
+            } else if (position == solutionRow) {
+                return 7;
             } else if (position == anonymousRow || position == multipleRow || position == quizRow) {
                 return 6;
             } else {
@@ -903,42 +979,44 @@ public class PollCreateActivity extends BaseFragment {
     }
 
     @Override
-    public ThemeDescription[] getThemeDescriptions() {
-        return new ThemeDescription[]{
-                new ThemeDescription(listView, ThemeDescription.FLAG_CELLBACKGROUNDCOLOR, new Class[]{HeaderCell.class, TextCell.class, PollEditTextCell.class, TextCheckCell.class}, null, null, null, Theme.key_windowBackgroundWhite),
-                new ThemeDescription(fragmentView, ThemeDescription.FLAG_BACKGROUND, null, null, null, null, Theme.key_windowBackgroundGray),
+    public ArrayList<ThemeDescription> getThemeDescriptions() {
+        ArrayList<ThemeDescription> themeDescriptions = new ArrayList<>();
 
-                new ThemeDescription(actionBar, ThemeDescription.FLAG_BACKGROUND, null, null, null, null, Theme.key_actionBarDefault),
-                new ThemeDescription(listView, ThemeDescription.FLAG_LISTGLOWCOLOR, null, null, null, null, Theme.key_actionBarDefault),
-                new ThemeDescription(actionBar, ThemeDescription.FLAG_AB_ITEMSCOLOR, null, null, null, null, Theme.key_actionBarDefaultIcon),
-                new ThemeDescription(actionBar, ThemeDescription.FLAG_AB_TITLECOLOR, null, null, null, null, Theme.key_actionBarDefaultTitle),
-                new ThemeDescription(actionBar, ThemeDescription.FLAG_AB_SELECTORCOLOR, null, null, null, null, Theme.key_actionBarDefaultSelector),
+        themeDescriptions.add(new ThemeDescription(listView, ThemeDescription.FLAG_CELLBACKGROUNDCOLOR, new Class[]{HeaderCell.class, TextCell.class, PollEditTextCell.class, TextCheckCell.class}, null, null, null, Theme.key_windowBackgroundWhite));
+        themeDescriptions.add(new ThemeDescription(fragmentView, ThemeDescription.FLAG_BACKGROUND, null, null, null, null, Theme.key_windowBackgroundGray));
 
-                new ThemeDescription(listView, 0, new Class[]{HeaderCell.class}, new String[]{"textView"}, null, null, null, Theme.key_windowBackgroundWhiteBlueHeader),
-                new ThemeDescription(listView, ThemeDescription.FLAG_CHECKTAG, new Class[]{HeaderCell.class}, new String[]{"textView2"}, null, null, null, Theme.key_windowBackgroundWhiteRedText5),
-                new ThemeDescription(listView, ThemeDescription.FLAG_CHECKTAG, new Class[]{HeaderCell.class}, new String[]{"textView2"}, null, null, null, Theme.key_windowBackgroundWhiteGrayText3),
+        themeDescriptions.add(new ThemeDescription(actionBar, ThemeDescription.FLAG_BACKGROUND, null, null, null, null, Theme.key_actionBarDefault));
+        themeDescriptions.add(new ThemeDescription(listView, ThemeDescription.FLAG_LISTGLOWCOLOR, null, null, null, null, Theme.key_actionBarDefault));
+        themeDescriptions.add(new ThemeDescription(actionBar, ThemeDescription.FLAG_AB_ITEMSCOLOR, null, null, null, null, Theme.key_actionBarDefaultIcon));
+        themeDescriptions.add(new ThemeDescription(actionBar, ThemeDescription.FLAG_AB_TITLECOLOR, null, null, null, null, Theme.key_actionBarDefaultTitle));
+        themeDescriptions.add(new ThemeDescription(actionBar, ThemeDescription.FLAG_AB_SELECTORCOLOR, null, null, null, null, Theme.key_actionBarDefaultSelector));
 
-                new ThemeDescription(listView, ThemeDescription.FLAG_TEXTCOLOR, new Class[]{PollEditTextCell.class}, new String[]{"textView"}, null, null, null, Theme.key_windowBackgroundWhiteBlackText),
-                new ThemeDescription(listView, ThemeDescription.FLAG_HINTTEXTCOLOR, new Class[]{PollEditTextCell.class}, new String[]{"textView"}, null, null, null, Theme.key_windowBackgroundWhiteHintText),
-                new ThemeDescription(listView, ThemeDescription.FLAG_HINTTEXTCOLOR, new Class[]{PollEditTextCell.class}, new String[]{"deleteImageView"}, null, null, null, Theme.key_windowBackgroundWhiteGrayIcon),
-                new ThemeDescription(listView, ThemeDescription.FLAG_HINTTEXTCOLOR, new Class[]{PollEditTextCell.class}, new String[]{"moveImageView"}, null, null, null, Theme.key_windowBackgroundWhiteGrayIcon),
-                new ThemeDescription(listView, ThemeDescription.FLAG_USEBACKGROUNDDRAWABLE | ThemeDescription.FLAG_DRAWABLESELECTEDSTATE, new Class[]{PollEditTextCell.class}, new String[]{"deleteImageView"}, null, null, null, Theme.key_stickers_menuSelector),
-                new ThemeDescription(listView, ThemeDescription.FLAG_CHECKTAG, new Class[]{PollEditTextCell.class}, new String[]{"textView2"}, null, null, null, Theme.key_windowBackgroundWhiteRedText5),
-                new ThemeDescription(listView, 0, new Class[]{PollEditTextCell.class}, new String[]{"checkBox"}, null, null, null, Theme.key_windowBackgroundWhiteGrayIcon),
-                new ThemeDescription(listView, 0, new Class[]{PollEditTextCell.class}, new String[]{"checkBox"}, null, null, null, Theme.key_checkboxCheck),
+        themeDescriptions.add(new ThemeDescription(listView, 0, new Class[]{HeaderCell.class}, new String[]{"textView"}, null, null, null, Theme.key_windowBackgroundWhiteBlueHeader));
+        themeDescriptions.add(new ThemeDescription(listView, ThemeDescription.FLAG_CHECKTAG, new Class[]{HeaderCell.class}, new String[]{"textView2"}, null, null, null, Theme.key_windowBackgroundWhiteRedText5));
+        themeDescriptions.add(new ThemeDescription(listView, ThemeDescription.FLAG_CHECKTAG, new Class[]{HeaderCell.class}, new String[]{"textView2"}, null, null, null, Theme.key_windowBackgroundWhiteGrayText3));
 
-                new ThemeDescription(listView, 0, new Class[]{TextCheckCell.class}, new String[]{"textView"}, null, null, null, Theme.key_windowBackgroundWhiteBlackText),
-                new ThemeDescription(listView, 0, new Class[]{TextCheckCell.class}, new String[]{"valueTextView"}, null, null, null, Theme.key_windowBackgroundWhiteGrayText2),
-                new ThemeDescription(listView, 0, new Class[]{TextCheckCell.class}, new String[]{"checkBox"}, null, null, null, Theme.key_switchTrack),
-                new ThemeDescription(listView, 0, new Class[]{TextCheckCell.class}, new String[]{"checkBox"}, null, null, null, Theme.key_switchTrackChecked),
+        themeDescriptions.add(new ThemeDescription(listView, ThemeDescription.FLAG_TEXTCOLOR, new Class[]{PollEditTextCell.class}, new String[]{"textView"}, null, null, null, Theme.key_windowBackgroundWhiteBlackText));
+        themeDescriptions.add(new ThemeDescription(listView, ThemeDescription.FLAG_HINTTEXTCOLOR, new Class[]{PollEditTextCell.class}, new String[]{"textView"}, null, null, null, Theme.key_windowBackgroundWhiteHintText));
+        themeDescriptions.add(new ThemeDescription(listView, ThemeDescription.FLAG_HINTTEXTCOLOR, new Class[]{PollEditTextCell.class}, new String[]{"deleteImageView"}, null, null, null, Theme.key_windowBackgroundWhiteGrayIcon));
+        themeDescriptions.add(new ThemeDescription(listView, ThemeDescription.FLAG_HINTTEXTCOLOR, new Class[]{PollEditTextCell.class}, new String[]{"moveImageView"}, null, null, null, Theme.key_windowBackgroundWhiteGrayIcon));
+        themeDescriptions.add(new ThemeDescription(listView, ThemeDescription.FLAG_USEBACKGROUNDDRAWABLE | ThemeDescription.FLAG_DRAWABLESELECTEDSTATE, new Class[]{PollEditTextCell.class}, new String[]{"deleteImageView"}, null, null, null, Theme.key_stickers_menuSelector));
+        themeDescriptions.add(new ThemeDescription(listView, ThemeDescription.FLAG_CHECKTAG, new Class[]{PollEditTextCell.class}, new String[]{"textView2"}, null, null, null, Theme.key_windowBackgroundWhiteRedText5));
+        themeDescriptions.add(new ThemeDescription(listView, 0, new Class[]{PollEditTextCell.class}, new String[]{"checkBox"}, null, null, null, Theme.key_windowBackgroundWhiteGrayIcon));
+        themeDescriptions.add(new ThemeDescription(listView, 0, new Class[]{PollEditTextCell.class}, new String[]{"checkBox"}, null, null, null, Theme.key_checkboxCheck));
 
-                new ThemeDescription(listView, ThemeDescription.FLAG_SELECTOR, null, null, null, null, Theme.key_listSelector),
+        themeDescriptions.add(new ThemeDescription(listView, 0, new Class[]{TextCheckCell.class}, new String[]{"textView"}, null, null, null, Theme.key_windowBackgroundWhiteBlackText));
+        themeDescriptions.add(new ThemeDescription(listView, 0, new Class[]{TextCheckCell.class}, new String[]{"valueTextView"}, null, null, null, Theme.key_windowBackgroundWhiteGrayText2));
+        themeDescriptions.add(new ThemeDescription(listView, 0, new Class[]{TextCheckCell.class}, new String[]{"checkBox"}, null, null, null, Theme.key_switchTrack));
+        themeDescriptions.add(new ThemeDescription(listView, 0, new Class[]{TextCheckCell.class}, new String[]{"checkBox"}, null, null, null, Theme.key_switchTrackChecked));
 
-                new ThemeDescription(listView, 0, new Class[]{View.class}, Theme.dividerPaint, null, null, Theme.key_divider),
+        themeDescriptions.add(new ThemeDescription(listView, ThemeDescription.FLAG_SELECTOR, null, null, null, null, Theme.key_listSelector));
 
-                new ThemeDescription(listView, 0, new Class[]{TextCell.class}, new String[]{"textView"}, null, null, null, Theme.key_windowBackgroundWhiteBlueText4),
-                new ThemeDescription(listView, ThemeDescription.FLAG_BACKGROUNDFILTER, new Class[]{TextCell.class}, new String[]{"imageView"}, null, null, null, Theme.key_switchTrackChecked),
-                new ThemeDescription(listView, 0, new Class[]{TextCell.class}, new String[]{"imageView"}, null, null, null, Theme.key_checkboxCheck),
-        };
+        themeDescriptions.add(new ThemeDescription(listView, 0, new Class[]{View.class}, Theme.dividerPaint, null, null, Theme.key_divider));
+
+        themeDescriptions.add(new ThemeDescription(listView, 0, new Class[]{TextCell.class}, new String[]{"textView"}, null, null, null, Theme.key_windowBackgroundWhiteBlueText4));
+        themeDescriptions.add(new ThemeDescription(listView, ThemeDescription.FLAG_BACKGROUNDFILTER, new Class[]{TextCell.class}, new String[]{"imageView"}, null, null, null, Theme.key_switchTrackChecked));
+        themeDescriptions.add(new ThemeDescription(listView, 0, new Class[]{TextCell.class}, new String[]{"imageView"}, null, null, null, Theme.key_checkboxCheck));
+
+        return themeDescriptions;
     }
 }
