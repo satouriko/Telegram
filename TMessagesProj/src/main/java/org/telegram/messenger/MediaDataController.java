@@ -9,7 +9,6 @@
 package org.telegram.messenger;
 
 import android.app.Activity;
-import android.app.Dialog;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -54,7 +53,6 @@ import org.telegram.ui.Components.Bulletin;
 import org.telegram.ui.Components.StickerSetBulletinLayout;
 import org.telegram.ui.Components.StickersArchiveAlert;
 import org.telegram.ui.Components.TextStyleSpan;
-import org.telegram.ui.Components.TrendingStickersAlert;
 import org.telegram.ui.Components.URLSpanReplacement;
 import org.telegram.ui.Components.URLSpanUserMention;
 import org.telegram.ui.LaunchActivity;
@@ -3930,14 +3928,14 @@ public class MediaDataController extends BaseController {
         Collections.sort(entities, entityComparator);
     }
 
-    private static boolean checkInclusion(int index, ArrayList<TLRPC.MessageEntity> entities) {
+    private static boolean checkInclusion(int index, ArrayList<TLRPC.MessageEntity> entities, boolean end) {
         if (entities == null || entities.isEmpty()) {
             return false;
         }
         int count = entities.size();
         for (int a = 0; a < count; a++) {
             TLRPC.MessageEntity entity = entities.get(a);
-            if (entity.offset <= index && entity.offset + entity.length > index) {
+            if ((end ? entity.offset < index : entity.offset <= index) && entity.offset + entity.length > index) {
                 return true;
             }
         }
@@ -4265,7 +4263,7 @@ public class MediaDataController extends BaseController {
                     TextStyleSpan span = spans[a];
                     int spanStart = spannable.getSpanStart(span);
                     int spanEnd = spannable.getSpanEnd(span);
-                    if (checkInclusion(spanStart, entities) || checkInclusion(spanEnd, entities) || checkIntersection(spanStart, spanEnd, entities)) {
+                    if (checkInclusion(spanStart, entities, false) || checkInclusion(spanEnd, entities, true) || checkIntersection(spanStart, spanEnd, entities)) {
                         continue;
                     }
                     if (entities == null) {
@@ -4369,7 +4367,7 @@ public class MediaDataController extends BaseController {
             while ((index = TextUtils.indexOf(message[0], checkString, lastIndex)) != -1) {
                 if (start == -1) {
                     char prevChar = index == 0 ? ' ' : message[0].charAt(index - 1);
-                    if (!checkInclusion(index, entities) && (prevChar == ' ' || prevChar == '\n')) {
+                    if (!checkInclusion(index, entities, false) && (prevChar == ' ' || prevChar == '\n')) {
                         start = index;
                     }
                     lastIndex = index + 2;
@@ -4382,7 +4380,7 @@ public class MediaDataController extends BaseController {
                         }
                     }
                     lastIndex = index + 2;
-                    if (checkInclusion(index, entities) || checkIntersection(start, index, entities)) {
+                    if (checkInclusion(index, entities, false) || checkIntersection(start, index, entities)) {
                         start = -1;
                         continue;
                     }
