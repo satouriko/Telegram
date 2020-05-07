@@ -55,6 +55,8 @@ import org.telegram.ui.Components.SeekBarView;
 
 import java.util.ArrayList;
 
+import tw.nekomimi.nekogram.translator.Translator;
+
 public class NekoSettingsActivity extends BaseFragment {
 
     private RecyclerListView listView;
@@ -225,45 +227,9 @@ public class NekoSettingsActivity extends BaseFragment {
             } else if (position == messageMenuRow) {
                 showMessageMenuAlert();
             } else if (position == translationProviderRow) {
-                ArrayList<String> arrayList = new ArrayList<>();
-                ArrayList<Integer> types = new ArrayList<>();
-                arrayList.add(LocaleController.getString("ProviderGoogleTranslate", R.string.ProviderGoogleTranslate));
-                types.add(1);
-                arrayList.add(LocaleController.getString("ProviderGoogleTranslateCN", R.string.ProviderGoogleTranslateCN));
-                types.add(2);
-                arrayList.add(LocaleController.getString("ProviderLingocloud", R.string.ProviderLingocloud));
-                types.add(3);
-                arrayList.add(LocaleController.getString("ProviderGoogleTranslateWeb", R.string.ProviderGoogleTranslateWeb));
-                types.add(-1);
-                arrayList.add(LocaleController.getString("ProviderGoogleTranslateCNWeb", R.string.ProviderGoogleTranslateCNWeb));
-                types.add(-2);
-                arrayList.add(LocaleController.getString("ProviderBaiduFanyiWeb", R.string.ProviderBaiduFanyiWeb));
-                types.add(-3);
-                arrayList.add(LocaleController.getString("ProviderDeepLWeb", R.string.ProviderDeepLWeb));
-                types.add(-4);
-
-                AlertDialog.Builder builder = new AlertDialog.Builder(context);
-                builder.setTitle(LocaleController.getString("TranslationProvider", R.string.TranslationProvider));
-                final LinearLayout linearLayout = new LinearLayout(context);
-                linearLayout.setOrientation(LinearLayout.VERTICAL);
-                builder.setView(linearLayout);
-
-                for (int a = 0; a < arrayList.size(); a++) {
-                    RadioColorCell cell = new RadioColorCell(context);
-                    cell.setPadding(AndroidUtilities.dp(4), 0, AndroidUtilities.dp(4), 0);
-                    cell.setTag(a);
-                    cell.setCheckColor(Theme.getColor(Theme.key_radioBackground), Theme.getColor(Theme.key_dialogRadioBackgroundChecked));
-                    cell.setTextAndValue(arrayList.get(a), NekoConfig.translationProvider == types.get(a));
-                    linearLayout.addView(cell);
-                    cell.setOnClickListener(v -> {
-                        Integer which = (Integer) v.getTag();
-                        NekoConfig.setTranslationProvider(types.get(which));
-                        listAdapter.notifyItemChanged(translationProviderRow);
-                        builder.getDismissRunnable().run();
-                    });
-                }
-                builder.setNegativeButton(LocaleController.getString("Cancel", R.string.Cancel), null);
-                showDialog(builder.create());
+                AlertDialog dialog = getTranslationProviderAlert(context);
+                dialog.setOnDismissListener(dialog1 -> listAdapter.notifyItemChanged(translationProviderRow));
+                showDialog(dialog);
             } else if (position == pauseMusicOnRecordRow) {
                 SharedConfig.togglePauseMusicOnRecord();
                 if (view instanceof TextCheckCell) {
@@ -400,6 +366,47 @@ public class NekoSettingsActivity extends BaseFragment {
                 AndroidUtilities.runOnUIThread(() -> AlertsCreator.processError(currentAccount, error, this, req));
             }
         }));
+    }
+
+    static public AlertDialog getTranslationProviderAlert(Context context) {
+        ArrayList<String> arrayList = new ArrayList<>();
+        ArrayList<Integer> types = new ArrayList<>();
+        arrayList.add(LocaleController.getString("ProviderGoogleTranslate", R.string.ProviderGoogleTranslate));
+        types.add(Translator.PROVIDER_GOOGLE);
+        arrayList.add(LocaleController.getString("ProviderGoogleTranslateCN", R.string.ProviderGoogleTranslateCN));
+        types.add(Translator.PROVIDER_GOOGLE_CN);
+        arrayList.add(LocaleController.getString("ProviderLingocloud", R.string.ProviderLingocloud));
+        types.add(Translator.PROVIDER_LINGO);
+        arrayList.add(LocaleController.getString("ProviderGoogleTranslateWeb", R.string.ProviderGoogleTranslateWeb));
+        types.add(Translator.PROVIDER_GOOGLE_WEB);
+        arrayList.add(LocaleController.getString("ProviderGoogleTranslateCNWeb", R.string.ProviderGoogleTranslateCNWeb));
+        types.add(Translator.PROVIDER_GOOGLE_CN_WEB);
+        arrayList.add(LocaleController.getString("ProviderBaiduFanyiWeb", R.string.ProviderBaiduFanyiWeb));
+        types.add(Translator.PROVIDER_BAIDU_WEB);
+        arrayList.add(LocaleController.getString("ProviderDeepLWeb", R.string.ProviderDeepLWeb));
+        types.add(Translator.PROVIDER_DEEPL_WEB);
+
+        AlertDialog.Builder builder = new AlertDialog.Builder(context);
+        builder.setTitle(LocaleController.getString("TranslationProvider", R.string.TranslationProvider));
+        final LinearLayout linearLayout = new LinearLayout(context);
+        linearLayout.setOrientation(LinearLayout.VERTICAL);
+        builder.setView(linearLayout);
+
+        for (int a = 0; a < arrayList.size(); a++) {
+            RadioColorCell cell = new RadioColorCell(context);
+            cell.setPadding(AndroidUtilities.dp(4), 0, AndroidUtilities.dp(4), 0);
+            cell.setTag(a);
+            cell.setCheckColor(Theme.getColor(Theme.key_radioBackground), Theme.getColor(Theme.key_dialogRadioBackgroundChecked));
+            cell.setTextAndValue(arrayList.get(a), NekoConfig.translationProvider == types.get(a));
+            linearLayout.addView(cell);
+            cell.setOnClickListener(v -> {
+                Integer which = (Integer) v.getTag();
+                NekoConfig.setTranslationProvider(types.get(which));
+                builder.getDismissRunnable().run();
+            });
+        }
+        builder.setNegativeButton(LocaleController.getString("Cancel", R.string.Cancel), null);
+        return builder.create();
     }
 
     private void showMessageMenuAlert() {
@@ -545,25 +552,25 @@ public class NekoSettingsActivity extends BaseFragment {
                     } else if (position == translationProviderRow) {
                         String value;
                         switch (NekoConfig.translationProvider) {
-                            case 1:
+                            case Translator.PROVIDER_GOOGLE:
                                 value = LocaleController.getString("ProviderGoogleTranslate", R.string.ProviderGoogleTranslate);
                                 break;
-                            case -1:
+                            case Translator.PROVIDER_GOOGLE_WEB:
                                 value = LocaleController.getString("ProviderGoogleTranslateWeb", R.string.ProviderGoogleTranslateWeb);
                                 break;
-                            case 2:
+                            case Translator.PROVIDER_GOOGLE_CN:
                                 value = LocaleController.getString("ProviderGoogleTranslateCN", R.string.ProviderGoogleTranslateCN);
                                 break;
-                            case -2:
+                            case Translator.PROVIDER_GOOGLE_CN_WEB:
                                 value = LocaleController.getString("ProviderGoogleTranslateCNWeb", R.string.ProviderGoogleTranslateCNWeb);
                                 break;
-                            case -3:
+                            case Translator.PROVIDER_BAIDU_WEB:
                                 value = LocaleController.getString("ProviderBaiduFanyiWeb", R.string.ProviderBaiduFanyiWeb);
                                 break;
-                            case -4:
+                            case Translator.PROVIDER_DEEPL_WEB:
                                 value = LocaleController.getString("ProviderDeepLWeb", R.string.ProviderDeepLWeb);
                                 break;
-                            case 3:
+                            case Translator.PROVIDER_LINGO:
                             default:
                                 value = LocaleController.getString("ProviderLingocloud", R.string.ProviderLingocloud);
                                 break;

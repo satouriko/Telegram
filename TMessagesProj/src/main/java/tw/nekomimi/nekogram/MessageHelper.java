@@ -32,6 +32,7 @@ public class MessageHelper extends BaseController {
         chatMessageCell.invalidate();
     }
 
+
     public static MessageHelper getInstance(int num) {
         MessageHelper localInstance = Instance[num];
         if (localInstance == null) {
