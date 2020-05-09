@@ -221,6 +221,7 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
     private TextView docInfoTextView;
     private ActionBarMenuItem menuItem;
     private ActionBarMenuSubItem allMediaItem;
+    private ActionBarMenuItem sendNoQuoteItem;
     private ActionBarMenuItem sendItem;
     private ActionBarMenuItem pipItem;
     private ActionBarMenuItem masksItem;
@@ -689,6 +690,7 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
     private final static int gallery_menu_save = 1;
     private final static int gallery_menu_showall = 2;
     private final static int gallery_menu_send = 3;
+    private final static int gallery_menu_send_noquote = 93;
     private final static int gallery_menu_showinchat = 4;
     private final static int gallery_menu_pip = 5;
     private final static int gallery_menu_delete = 6;
@@ -2174,7 +2176,7 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
                     launchActivity.presentFragment(new ChatActivity(args), remove, true);
                     currentMessageObject = null;
                     closePhoto(false, false);
-                } else if (id == gallery_menu_send) {
+                } else if (id == gallery_menu_send || id == gallery_menu_send_noquote) {
                     if (currentMessageObject == null || parentActivity == null) {
                         return;
                     }
@@ -2200,6 +2202,9 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
                             int lower_part = (int) did;
                             int high_part = (int) (did >> 32);
                             Bundle args1 = new Bundle();
+                            if (id == gallery_menu_send_noquote) {
+                                args1.putBoolean("forward_noquote", true);
+                            }
                             args1.putBoolean("scrollToTopOnResume", true);
                             if (lower_part != 0) {
                                 if (lower_part > 0) {
@@ -2443,6 +2448,7 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
 
         masksItem = menu.addItem(gallery_menu_masks, R.drawable.msg_mask);
         pipItem = menu.addItem(gallery_menu_pip, R.drawable.ic_goinline);
+        sendNoQuoteItem = menu.addItem(gallery_menu_send_noquote, R.drawable.msg_forward_noquote);
         sendItem = menu.addItem(gallery_menu_send, R.drawable.msg_forward);
 
         menuItem = menu.addItem(0, R.drawable.ic_ab_other);
@@ -2457,6 +2463,7 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
         menuItem.addSubItem(gallery_menu_delete, R.drawable.msg_delete, LocaleController.getString("Delete", R.string.Delete)).setColors(0xfffafafa, 0xfffafafa);
         menuItem.addSubItem(gallery_menu_cancel_loading, R.drawable.msg_cancel, LocaleController.getString("StopDownload", R.string.StopDownload)).setColors(0xfffafafa, 0xfffafafa);
         menuItem.redrawPopup(0xf9222222);
+        sendNoQuoteItem.setContentDescription(LocaleController.getString("NoQuoteForward", R.string.NoQuoteForward));
         sendItem.setContentDescription(LocaleController.getString("Forward", R.string.Forward));
 
         bottomLayout = new FrameLayout(actvityContext);
@@ -5661,6 +5668,7 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
         sharedMediaType = MediaDataController.MEDIA_PHOTOVIDEO;
         allMediaItem.setText(LocaleController.getString("ShowAllMedia", R.string.ShowAllMedia));
         menuItem.setVisibility(View.VISIBLE);
+        sendNoQuoteItem.setVisibility(View.GONE);
         sendItem.setVisibility(View.GONE);
         pipItem.setVisibility(View.GONE);
         cameraItem.setVisibility(View.GONE);
@@ -5785,13 +5793,19 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
                     needSearchImageInArr = false;
                 } else if (currentAnimation != null) {
                     needSearchImageInArr = false;
-                    sendItem.setVisibility(View.VISIBLE);
+                    sendNoQuoteItem.setVisibility(View.VISIBLE);
+                    if (!messageObject.scheduled) {
+                        sendItem.setVisibility(View.VISIBLE);
+                    }
                 } else if (!messageObject.scheduled && !(messageObject.messageOwner.media instanceof TLRPC.TL_messageMediaInvoice) && !(messageObject.messageOwner.media instanceof TLRPC.TL_messageMediaWebPage) && (messageObject.messageOwner.action == null || messageObject.messageOwner.action instanceof TLRPC.TL_messageActionEmpty)) {
                     needSearchImageInArr = true;
                     imagesByIds[0].put(messageObject.getId(), messageObject);
                     menuItem.showSubItem(gallery_menu_showinchat);
                     menuItem.showSubItem(gallery_menu_showall);
-                    sendItem.setVisibility(View.VISIBLE);
+                    sendNoQuoteItem.setVisibility(View.VISIBLE);
+                    if (!messageObject.scheduled) {
+                        sendItem.setVisibility(View.VISIBLE);
+                    }
                 }
                 setImageIndex(0, true);
             }
@@ -5835,6 +5849,7 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
             if (!openingObject.scheduled) {
                 opennedFromMedia = true;
                 menuItem.showSubItem(gallery_menu_showinchat);
+                sendNoQuoteItem.setVisibility(View.VISIBLE);
                 sendItem.setVisibility(View.VISIBLE);
                 if (openingObject.canPreviewDocument()) {
                     sharedMediaType = MediaDataController.MEDIA_FILE;
@@ -6119,6 +6134,7 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
                     actionBar.setTitle(LocaleController.getString("AttachDocument", R.string.AttachDocument));
                 }
                 if ((int) currentDialogId == 0) {
+                    sendNoQuoteItem.setVisibility(View.GONE);
                     sendItem.setVisibility(View.GONE);
                 }
                 if (newMessageObject.messageOwner.ttl != 0 && newMessageObject.messageOwner.ttl < 60 * 60) {
