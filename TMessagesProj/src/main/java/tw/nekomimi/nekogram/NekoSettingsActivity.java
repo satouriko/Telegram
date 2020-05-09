@@ -272,7 +272,6 @@ public class NekoSettingsActivity extends BaseFragment {
         chatRow = rowCount++;
         useSystemEmojiRow = rowCount++;
         ignoreBlockedRow = rowCount++;
-        saveCacheToPrivateDirectoryRow = Build.VERSION.SDK_INT >= 24 ? rowCount++ : -1;
         pauseMusicOnRecordRow = rowCount++;
         rearVideoMessagesRow = rowCount++;
         mapPreviewRow = rowCount++;
@@ -280,6 +279,7 @@ public class NekoSettingsActivity extends BaseFragment {
         translationProviderRow = rowCount++;
         chat2Row = rowCount++;
         experimentRow = rowCount++;
+        saveCacheToPrivateDirectoryRow = Build.VERSION.SDK_INT >= 24 ? rowCount++ : -1;
         smoothKeyboardRow = !AndroidUtilities.isTablet() ? rowCount++ : -1;
         disableFilteringRow = rowCount++;
         unlimitedFavedStickersRow = rowCount++;
