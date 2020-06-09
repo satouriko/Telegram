@@ -19,19 +19,17 @@ public class MessageHelper extends BaseController {
         super(num);
     }
 
-    public static void setMessageContent(MessageObject messageObject, ChatMessageCell chatMessageCell, String message) {
-        messageObject.messageOwner.message = message;
+    public static void resetMessageContent(MessageObject messageObject, ChatMessageCell chatMessageCell) {
+        messageObject.forceUpdate = true;
         if (messageObject.caption != null) {
             messageObject.caption = null;
             messageObject.generateCaption();
-            messageObject.forceUpdate = true;
         }
         messageObject.applyNewText();
         messageObject.resetLayout();
         chatMessageCell.requestLayout();
         chatMessageCell.invalidate();
     }
-
 
     public static MessageHelper getInstance(int num) {
         MessageHelper localInstance = Instance[num];
