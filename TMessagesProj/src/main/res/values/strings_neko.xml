@@ -45,6 +45,7 @@
     <string name="TranslateFailed">Translate server error</string>
     <string name="TranslationProvider">Translation provider</string>
     <string name="ProviderGoogleTranslate">Google Translate</string>
+    <string name="ProviderYandex">Yandex Translate</string>
     <string name="ProviderGoogleTranslateWeb">Google Translate (Web)</string>
     <string name="ProviderGoogleTranslateCN">Google Translate CN</string>
     <string name="ProviderGoogleTranslateCNWeb">Google Translate CN (Web)</string>

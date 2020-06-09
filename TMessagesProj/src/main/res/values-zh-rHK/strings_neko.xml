@@ -42,6 +42,7 @@
     <string name="TranslateFailed">翻譯服務器錯誤</string>
     <string name="TranslationProvider">翻譯源</string>
     <string name="ProviderGoogleTranslate">Google 翻譯</string>
+    <string name="ProviderYandex">Yandex 翻譯</string>
     <string name="ProviderGoogleTranslateWeb">Google 翻譯 (Web)</string>
     <string name="ProviderGoogleTranslateCN">Google 中國翻譯</string>
     <string name="ProviderGoogleTranslateCNWeb">Google 中國翻譯 (Web)</string>

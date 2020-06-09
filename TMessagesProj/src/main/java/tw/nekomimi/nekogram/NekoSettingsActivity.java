@@ -205,12 +205,13 @@ public class NekoSettingsActivity extends BaseFragment implements UpdateHelper.U
                     cell.setOnClickListener(v -> {
                         Integer which = (Integer) v.getTag();
                         NekoConfig.setMapPreviewProvider(types.get(which));
-                        listAdapter.notifyItemChanged(mapPreviewRow);
                         builder.getDismissRunnable().run();
                     });
                 }
                 builder.setNegativeButton(LocaleController.getString("Cancel", R.string.Cancel), null);
-                showDialog(builder.create());
+                showDialog(builder.create()).setOnDismissListener(dialog1 -> {
+                    listAdapter.notifyItemChanged(mapPreviewRow);
+                });
             } else if (position == disableFilteringRow) {
                 sensitiveEnabled = !sensitiveEnabled;
                 TLRPC.TL_account_setContentSettings req = new TLRPC.TL_account_setContentSettings();
@@ -236,8 +237,9 @@ public class NekoSettingsActivity extends BaseFragment implements UpdateHelper.U
                 showMessageMenuAlert();
             } else if (position == translationProviderRow) {
                 AlertDialog dialog = getTranslationProviderAlert(context);
-                dialog.setOnDismissListener(dialog1 -> listAdapter.notifyItemChanged(translationProviderRow));
-                showDialog(dialog);
+                showDialog(dialog).setOnDismissListener(dialog1 -> {
+                    listAdapter.notifyItemChanged(translationProviderRow);
+                });
             } else if (position == pauseMusicOnRecordRow) {
                 SharedConfig.togglePauseMusicOnRecord();
                 if (view instanceof TextCheckCell) {
@@ -395,6 +397,8 @@ public class NekoSettingsActivity extends BaseFragment implements UpdateHelper.U
         types.add(Translator.PROVIDER_GOOGLE_CN);
         arrayList.add(LocaleController.getString("ProviderLingocloud", R.string.ProviderLingocloud));
         types.add(Translator.PROVIDER_LINGO);
+        arrayList.add(LocaleController.getString("ProviderYandex", R.string.ProviderYandex));
+        types.add(Translator.PROVIDER_YANDEX);
         arrayList.add(LocaleController.getString("ProviderGoogleTranslateWeb", R.string.ProviderGoogleTranslateWeb));
         types.add(Translator.PROVIDER_GOOGLE_WEB);
         arrayList.add(LocaleController.getString("ProviderGoogleTranslateCNWeb", R.string.ProviderGoogleTranslateCNWeb));
@@ -595,6 +599,9 @@ public class NekoSettingsActivity extends BaseFragment implements UpdateHelper.U
                                 break;
                             case Translator.PROVIDER_DEEPL_WEB:
                                 value = LocaleController.getString("ProviderDeepLWeb", R.string.ProviderDeepLWeb);
+                                break;
+                            case Translator.PROVIDER_YANDEX:
+                                value = LocaleController.getString("ProviderYandex", R.string.ProviderYandex);
                                 break;
                             case Translator.PROVIDER_LINGO:
                             default:
