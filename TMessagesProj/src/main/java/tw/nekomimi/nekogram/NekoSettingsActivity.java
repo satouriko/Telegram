@@ -30,6 +30,7 @@ import org.telegram.messenger.NotificationCenter;
 import org.telegram.messenger.R;
 import org.telegram.messenger.SharedConfig;
 import org.telegram.messenger.UserConfig;
+import org.telegram.messenger.browser.Browser;
 import org.telegram.tgnet.ConnectionsManager;
 import org.telegram.tgnet.TLRPC;
 import org.telegram.ui.ActionBar.ActionBar;
@@ -44,6 +45,7 @@ import org.telegram.ui.Cells.HeaderCell;
 import org.telegram.ui.Cells.NotificationsCheckCell;
 import org.telegram.ui.Cells.RadioColorCell;
 import org.telegram.ui.Cells.ShadowSectionCell;
+import org.telegram.ui.Cells.TextCell;
 import org.telegram.ui.Cells.TextCheckCell;
 import org.telegram.ui.Cells.TextDetailSettingsCell;
 import org.telegram.ui.Cells.TextInfoPrivacyCell;
@@ -57,7 +59,7 @@ import java.util.ArrayList;
 
 import tw.nekomimi.nekogram.translator.Translator;
 
-public class NekoSettingsActivity extends BaseFragment {
+public class NekoSettingsActivity extends BaseFragment implements UpdateHelper.UpdateHelperDelegate {
 
     private RecyclerListView listView;
     private ListAdapter listAdapter;
@@ -65,6 +67,7 @@ public class NekoSettingsActivity extends BaseFragment {
 
     private boolean sensitiveCanChange = false;
     private boolean sensitiveEnabled = false;
+    private boolean checkingUpdate = false;
 
     private int rowCount;
 
@@ -90,6 +93,11 @@ public class NekoSettingsActivity extends BaseFragment {
     private int unlimitedFavedStickersRow;
     private int forceTabletRow;
     private int needRestartRow;
+
+    private int helpRow;
+    private int sourceCodeRow;
+    private int checkUpdateRow;
+    private int help2Row;
 
     @Override
     public boolean onFragmentCreate() {
@@ -248,6 +256,12 @@ public class NekoSettingsActivity extends BaseFragment {
                 if (view instanceof TextCheckCell) {
                     ((TextCheckCell) view).setChecked(NekoConfig.rearVideoMessages);
                 }
+            } else if (position == sourceCodeRow) {
+                Browser.openUrl(getParentActivity(), "https://github.com/rikakomoe/Nekogram-Lite");
+            } else if (position == checkUpdateRow) {
+                UpdateHelper.getInstance(currentAccount).checkNewVersionAvailable(this, false);
+                checkingUpdate = true;
+                listAdapter.notifyItemChanged(checkUpdateRow);
             }
 
         });
@@ -285,6 +299,10 @@ public class NekoSettingsActivity extends BaseFragment {
         unlimitedFavedStickersRow = rowCount++;
         forceTabletRow = rowCount++;
         needRestartRow = rowCount++;
+        helpRow = rowCount++;
+        sourceCodeRow = rowCount++;
+        checkUpdateRow = rowCount++;
+        help2Row = rowCount++;
         if (listAdapter != null) {
             listAdapter.notifyDataSetChanged();
         }
@@ -506,6 +524,14 @@ public class NekoSettingsActivity extends BaseFragment {
         showDialog(builder.create());
     }
 
+    @Override
+    public void didCheckNewVersionAvailable(String error) {
+        checkingUpdate = false;
+        AndroidUtilities.runOnUIThread(() -> {
+            listAdapter.notifyItemChanged(checkUpdateRow);
+        });
+    }
+
     private class ListAdapter extends RecyclerListView.SelectionAdapter {
 
         private Context mContext;
@@ -523,7 +549,7 @@ public class NekoSettingsActivity extends BaseFragment {
         public void onBindViewHolder(RecyclerView.ViewHolder holder, int position) {
             switch (holder.getItemViewType()) {
                 case 1: {
-                    if (false) {
+                    if (position == help2Row) {
                         holder.itemView.setBackgroundDrawable(Theme.getThemedDrawable(mContext, R.drawable.greydivider_bottom, Theme.key_windowBackgroundGrayShadow));
                     } else {
                         holder.itemView.setBackgroundDrawable(Theme.getThemedDrawable(mContext, R.drawable.greydivider, Theme.key_windowBackgroundGrayShadow));
@@ -614,6 +640,18 @@ public class NekoSettingsActivity extends BaseFragment {
                         headerCell.setText(LocaleController.getString("Chat", R.string.Chat));
                     } else if (position == experimentRow) {
                         headerCell.setText(LocaleController.getString("Experiment", R.string.Experiment));
+                    } else if (position == helpRow) {
+                        headerCell.setText(LocaleController.getString("About", R.string.About));
+                    }
+                    break;
+                }
+                case 6: {
+                    TextDetailSettingsCell settingsCell = (TextDetailSettingsCell) holder.itemView;
+                    settingsCell.setMultilineDetail(true);
+                    if (position == checkUpdateRow) {
+                        settingsCell.setTextAndValue(LocaleController.getString("CheckUpdate", R.string.CheckUpdate),
+                                checkingUpdate ? LocaleController.getString("CheckingUpdate", R.string.CheckingUpdate) :
+                                UpdateHelper.formatDateUpdate(NekoConfig.lastSuccessfulCheckUpdateTime), false);
                     }
                     break;
                 }
@@ -623,6 +661,12 @@ public class NekoSettingsActivity extends BaseFragment {
                         cell.setText(LocaleController.getString("SomeItemsNeedRestart", R.string.SomeItemsNeedRestart));
                     }
                     break;
+                }
+                case 8: {
+                    TextCell cell = (TextCell) holder.itemView;
+                    if (position == sourceCodeRow) {
+                        cell.setText(LocaleController.getString("SourceCode", R.string.SourceCode), true);
+                    }
                 }
             }
         }
@@ -634,7 +678,8 @@ public class NekoSettingsActivity extends BaseFragment {
                     position == forceTabletRow || position == mapPreviewRow ||
                     position == saveCacheToPrivateDirectoryRow || (position == disableFilteringRow && sensitiveCanChange) ||
                     position == unlimitedFavedStickersRow || position == messageMenuRow || position == rearVideoMessagesRow ||
-                    position == translationProviderRow || position == smoothKeyboardRow || position == pauseMusicOnRecordRow;
+                    position == translationProviderRow || position == smoothKeyboardRow || position == pauseMusicOnRecordRow ||
+                    position == checkUpdateRow || position == sourceCodeRow;
         }
 
         @Override
@@ -668,6 +713,10 @@ public class NekoSettingsActivity extends BaseFragment {
                     view = new TextInfoPrivacyCell(mContext);
                     view.setBackgroundDrawable(Theme.getThemedDrawable(mContext, R.drawable.greydivider, Theme.key_windowBackgroundGrayShadow));
                     break;
+                case 8:
+                    view = new TextCell(mContext);
+                    view.setBackgroundColor(Theme.getColor(Theme.key_windowBackgroundWhite));
+                    break;
             }
             view.setLayoutParams(new RecyclerView.LayoutParams(RecyclerView.LayoutParams.MATCH_PARENT, RecyclerView.LayoutParams.WRAP_CONTENT));
             return new RecyclerListView.Holder(view);
@@ -675,7 +724,7 @@ public class NekoSettingsActivity extends BaseFragment {
 
         @Override
         public int getItemViewType(int position) {
-            if (position == connection2Row || position == chat2Row) {
+            if (position == connection2Row || position == chat2Row || position == help2Row) {
                 return 1;
             } else if (position == mapPreviewRow || position == messageMenuRow || position == translationProviderRow) {
                 return 2;
@@ -685,12 +734,16 @@ public class NekoSettingsActivity extends BaseFragment {
                     position == disableFilteringRow || position == smoothKeyboardRow ||
                     position == pauseMusicOnRecordRow|| position == rearVideoMessagesRow) {
                 return 3;
-            } else if (position == connectionRow || position == chatRow || position == experimentRow) {
+            } else if (position == connectionRow || position == chatRow || position == experimentRow || position == helpRow) {
                 return 4;
+            } else if (position == checkUpdateRow) {
+                return 6;
             } else if (position == needRestartRow) {
                 return 7;
+            } else if (position == sourceCodeRow) {
+                return 8;
             }
-            return 6;
+            return 8;
         }
     }
 }

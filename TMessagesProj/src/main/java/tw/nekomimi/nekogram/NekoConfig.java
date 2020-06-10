@@ -31,6 +31,8 @@ public class NekoConfig {
 
     public static int translationProvider = 1;
 
+    public static long lastSuccessfulCheckUpdateTime = 0;
+
     private static boolean configLoaded;
 
     static {
@@ -58,6 +60,7 @@ public class NekoConfig {
                 editor.putBoolean("unlimitedFavedStickers", unlimitedFavedStickers);
                 editor.putBoolean("rearVideoMessages", rearVideoMessages);
                 editor.putInt("translationProvider", translationProvider);
+                editor.putLong("lastSuccessfulCheckUpdateTime", lastSuccessfulCheckUpdateTime);
 
                 editor.commit();
             } catch (Exception e) {
@@ -89,6 +92,7 @@ public class NekoConfig {
             unlimitedFavedStickers = preferences.getBoolean("unlimitedFavedStickers", false);
             translationProvider = preferences.getInt("translationProvider", 1);
             rearVideoMessages = preferences.getBoolean("rearVideoMessages", false);
+            lastSuccessfulCheckUpdateTime = preferences.getLong("lastSuccessfulCheckUpdateTime", 0);
             configLoaded = true;
         }
     }
@@ -225,6 +229,14 @@ public class NekoConfig {
         SharedPreferences preferences = ApplicationLoader.applicationContext.getSharedPreferences("nekoconfig", Activity.MODE_PRIVATE);
         SharedPreferences.Editor editor = preferences.edit();
         editor.putBoolean("rearVideoMessages", rearVideoMessages);
+        editor.commit();
+    }
+
+    public static void setLastSuccessfulCheckUpdateTime(long time) {
+        lastSuccessfulCheckUpdateTime = time;
+        SharedPreferences preferences = ApplicationLoader.applicationContext.getSharedPreferences("nekoconfig", Activity.MODE_PRIVATE);
+        SharedPreferences.Editor editor = preferences.edit();
+        editor.putLong("lastSuccessfulCheckUpdateTime", lastSuccessfulCheckUpdateTime);
         editor.commit();
     }
 }

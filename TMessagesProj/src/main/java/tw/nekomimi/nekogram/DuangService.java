@@ -17,6 +17,7 @@ import org.telegram.ui.LaunchActivity;
 
 public class DuangService extends Service {
 
+    private static final int NOTIFICATION_ID = 38264;
     NotificationManager systemNotificationManager = null;
 
     @Override
@@ -47,7 +48,7 @@ public class DuangService extends Service {
                 setContentIntent(pendingIntent).
                 setWhen(System.currentTimeMillis()).
                 build();
-        startForeground(38264, notification);
+        startForeground(NOTIFICATION_ID, notification);
         return super.onStartCommand(intent, flags, startId);
     }
 }

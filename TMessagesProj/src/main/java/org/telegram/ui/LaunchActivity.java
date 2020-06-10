@@ -122,8 +122,9 @@ import androidx.recyclerview.widget.RecyclerView;
 import tw.nekomimi.nekogram.DuangService;
 import tw.nekomimi.nekogram.NekoConfig;
 import tw.nekomimi.nekogram.NekoSettingsActivity;
+import tw.nekomimi.nekogram.UpdateHelper;
 
-public class LaunchActivity extends Activity implements ActionBarLayout.ActionBarLayoutDelegate, NotificationCenter.NotificationCenterDelegate, DialogsActivity.DialogsActivityDelegate {
+public class LaunchActivity extends Activity implements ActionBarLayout.ActionBarLayoutDelegate, NotificationCenter.NotificationCenterDelegate, DialogsActivity.DialogsActivityDelegate, UpdateHelper.UpdateHelperDelegate {
 
     private boolean finished;
     private String videoPath;
@@ -182,6 +183,20 @@ public class LaunchActivity extends Activity implements ActionBarLayout.ActionBa
     private AlertDialog loadingThemeProgressDialog;
 
     private Runnable lockRunnable;
+
+    @Override
+    public int getClassGuid() {
+        BaseFragment fragment = mainFragmentsStack.get(mainFragmentsStack.size() - 1);
+        if (fragment != null) {
+            return fragment.getClassGuid();
+        }
+        return 0;
+    }
+
+    @Override
+    public void didCheckNewVersionAvailable(String error) {
+
+    }
 
     private class DrawerItemTouchHelperCallback extends ItemTouchHelper.Callback {
 
@@ -3040,6 +3055,7 @@ public class LaunchActivity extends Activity implements ActionBarLayout.ActionBa
         } else if (UserConfig.getInstance(0).pendingAppUpdate != null) {
             showUpdateActivity(UserConfig.selectedAccount, UserConfig.getInstance(0).pendingAppUpdate, true);
         }
+        UpdateHelper.getInstance(currentAccount).checkNewVersionAvailable(this, true);
         checkAppUpdate(false);
     }
 

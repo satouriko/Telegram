@@ -57,4 +57,19 @@
     <string name="BotToken">Token</string>
     <string name="LoginExperimentAbout">Do not change the default settings in this list, unless you know what you are doing!</string>
     <string name="RearVideoMessages">Use rear camera in video messages</string>
+    <string name="SourceCode">Open-source code</string>
+    <string name="About">About</string>
+    <string name="CheckUpdate">Check for update</string>
+    <string name="LastUpdateFormatted">Last successfully checked %1$s</string>
+    <string name="LastUpdateDateFormatted">Last successfully checked on %1$s</string>
+    <string name="LastUpdateRecently">Last successfully checked just now</string>
+    <string name="LastUpdateNever">Never checked since install</string>
+    <string name="CheckingUpdate">Checking for update...</string>
+    <string name="NewUpdateAvailable">A new update available</string>
+    <string name="GuGuGu">I would</string>
+    <string name="DownloadNow">Download now</string>
+    <string name="DownloadingUpdate">Downloading app update</string>
+    <string name="DownloadingUpdateFinish">Downloaded app update, click to install</string>
+    <string name="DownloadingUpdateFail">Downloaded app failed</string>
+    <string name="ClickToRetry">Click to retry.</string>
 </resources>

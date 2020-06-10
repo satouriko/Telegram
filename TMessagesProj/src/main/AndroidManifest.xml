@@ -299,6 +299,7 @@
         <service android:name=".GoogleVoiceClientService"/>
         <service android:name=".MusicPlayerService" android:exported="true" android:enabled="true"/>
         <service android:name="tw.nekomimi.nekogram.DuangService" android:exported="true" android:enabled="true"/>
+        <service android:name="tw.nekomimi.nekogram.UpdateService" android:exported="true" android:enabled="true"/>
         <service android:name=".MusicBrowserService" android:exported="true">
             <intent-filter>
                 <action android:name="android.media.browse.MediaBrowserService"/>
