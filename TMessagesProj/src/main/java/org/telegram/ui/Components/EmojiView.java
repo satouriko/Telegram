@@ -1408,11 +1408,11 @@ public class EmojiView extends FrameLayout implements NotificationCenter.Notific
                         if (firstGifAttach && gifAdapter.getItemCount() > 1) {
                             ignoreLayout = true;
                             gifLayoutManager.scrollToPositionWithOffset(1, 0);
-                            gifSearchField.setVisibility(VISIBLE);
                             gifTabs.onPageScrolled(0, 0);
                             firstGifAttach = false;
                             ignoreLayout = false;
                         }
+                        gifSearchField.setVisibility(VISIBLE);
                         super.onLayout(changed, l, t, r, b);
                         checkGifSearchFieldScroll(true);
                     }
@@ -1447,7 +1447,7 @@ public class EmojiView extends FrameLayout implements NotificationCenter.Notific
                         }
                     }
                 });
-                gifGridView.setPadding(0, AndroidUtilities.dp(48 + 4), 0, AndroidUtilities.dp(44));
+                gifGridView.setPadding(0, AndroidUtilities.dp(4), 0, AndroidUtilities.dp(44));
                 gifGridView.setOverScrollMode(RecyclerListView.OVER_SCROLL_NEVER);
                 ((SimpleItemAnimator) gifGridView.getItemAnimator()).setSupportsChangeAnimations(false);
                 gifGridView.setAdapter(gifAdapter = new GifAdapter(context, true));
@@ -1497,7 +1497,7 @@ public class EmojiView extends FrameLayout implements NotificationCenter.Notific
                 gifTabs.setIndicatorColor(Theme.getColor(Theme.key_chat_emojiPanelStickerPackSelectorLine));
                 gifTabs.setUnderlineColor(Theme.getColor(Theme.key_chat_emojiPanelShadowLine));
                 gifTabs.setBackgroundColor(Theme.getColor(Theme.key_chat_emojiPanelBackground));
-                gifContainer.addView(gifTabs, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, 48, Gravity.LEFT | Gravity.TOP));
+                // gifContainer.addView(gifTabs, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, 48, Gravity.LEFT | Gravity.TOP));
                 updateGifTabs();
 
                 gifTabs.setDelegate(page -> {
@@ -1532,7 +1532,7 @@ public class EmojiView extends FrameLayout implements NotificationCenter.Notific
                     resetTabsY(Type.GIFS);
                 });
 
-                gifAdapter.loadTrendingGifs();
+                // gifAdapter.loadTrendingGifs();
             }
 
             stickersContainer = new FrameLayout(context);
@@ -2135,7 +2135,7 @@ public class EmojiView extends FrameLayout implements NotificationCenter.Notific
             } else if (a == 1) {
                 currentField = gifSearchField;
                 gridView = gifGridView;
-                tabStrip = gifTabs;
+                tabStrip = null; // gifTabs;
                 layoutManager = gifLayoutManager;
             } else {
                 currentField = stickersSearchField;
@@ -2272,7 +2272,7 @@ public class EmojiView extends FrameLayout implements NotificationCenter.Notific
                 currentField = gifSearchField;
                 gridView = gifGridView;
                 layoutManager = gifLayoutManager;
-                tabStrip = gifTabs;
+                tabStrip = null; // gifTabs;
             } else {
                 currentField = stickersSearchField;
                 gridView = stickersGridView;
@@ -2314,7 +2314,7 @@ public class EmojiView extends FrameLayout implements NotificationCenter.Notific
                             if (gridView == stickersGridView) {
                                 gridView.setPadding(0, AndroidUtilities.dp(48 + 4), 0, AndroidUtilities.dp(44));
                             } else if (gridView == gifGridView) {
-                                gridView.setPadding(0, AndroidUtilities.dp(48 + 4), 0, AndroidUtilities.dp(44));
+                                gridView.setPadding(0, AndroidUtilities.dp(4), 0, AndroidUtilities.dp(44));
                             } else if (gridView == emojiGridView) {
                                 gridView.setPadding(0, AndroidUtilities.dp(38), 0, AndroidUtilities.dp(44));
                             }
@@ -2559,7 +2559,7 @@ public class EmojiView extends FrameLayout implements NotificationCenter.Notific
 
     private void animateSearchField(@Type int type) {
         final RecyclerListView listView = getListViewForType(type);
-        final int tabsHeight = AndroidUtilities.dp(type == Type.EMOJIS ? 38 : 48);
+        final int tabsHeight = AndroidUtilities.dp(type == Type.EMOJIS ? 38 : type == Type.GIFS ? 0 : 48);
         final RecyclerView.ViewHolder holder = listView.findViewHolderForAdapterPosition(0);
         if (holder != null) {
             final float fraction = (holder.itemView.getBottom() - (tabsHeight + tabsMinusDy[type])) / (float) searchFieldHeight;
@@ -2993,7 +2993,7 @@ public class EmojiView extends FrameLayout implements NotificationCenter.Notific
 
         final boolean wasRecentTabSelected = lastPosition == gifRecentTabNum;
         final boolean hadRecent = gifRecentTabNum >= 0;
-        final boolean hasRecent = !recentGifs.isEmpty();
+        final boolean hasRecent = true; // = !recentGifs.isEmpty();
 
         gifTabs.beginUpdate(false);
 
@@ -3007,6 +3007,7 @@ public class EmojiView extends FrameLayout implements NotificationCenter.Notific
             gifTabs.addIconTab(0, gifIcons[0]);
         }
 
+        /* nobody like them
         gifTrendingTabNum = gifTabsCount++;
         gifTabs.addIconTab(1, gifIcons[1]);
 
@@ -3021,10 +3022,12 @@ public class EmojiView extends FrameLayout implements NotificationCenter.Notific
                 gifTabs.addIconTab(3 + i, emojiDrawable).setPadding(hPadding, vPadding, hPadding, vPadding);
             }
         }
+        */
 
         gifTabs.commitUpdate();
         gifTabs.updateTabStyles();
 
+        /*
         if (wasRecentTabSelected && !hasRecent) {
             gifTabs.selectTab(gifTrendingTabNum);
         } else if (ViewCompat.isLaidOut(gifTabs)) {
@@ -3034,6 +3037,7 @@ public class EmojiView extends FrameLayout implements NotificationCenter.Notific
                 gifTabs.onPageScrolled(lastPosition - 1, 0);
             }
         }
+        */
     }
 
     public void addRecentSticker(TLRPC.Document document) {
@@ -4971,7 +4975,7 @@ public class EmojiView extends FrameLayout implements NotificationCenter.Notific
             if (!loadingState) {
                 height = (int) ((height - searchFieldHeight - AndroidUtilities.dp(8)) / 3 * 1.7f);
             } else {
-                height -= AndroidUtilities.dp(48 + 44);
+                height -= AndroidUtilities.dp(44);
             }
 
             super.onMeasure(widthMeasureSpec, MeasureSpec.makeMeasureSpec(height, MeasureSpec.EXACTLY));
