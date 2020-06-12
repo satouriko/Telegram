@@ -21,6 +21,7 @@ import android.graphics.Rect;
 import android.graphics.drawable.Drawable;
 import android.os.Build;
 import androidx.annotation.Keep;
+
 import android.view.DisplayCutout;
 import android.view.Gravity;
 import android.view.MotionEvent;
@@ -468,6 +469,11 @@ public class DrawerLayoutContainer extends FrameLayout {
                 }
             }
             inLayout = false;
+        } else {
+            int newSize = heightSize - AndroidUtilities.statusBarHeight;
+            if (newSize > 0 && newSize < 4096) {
+                AndroidUtilities.displaySize.y = newSize;
+            }
         }
 
         final boolean applyInsets = lastInsets != null && Build.VERSION.SDK_INT >= 21;

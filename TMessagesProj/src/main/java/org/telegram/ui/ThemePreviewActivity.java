@@ -568,7 +568,7 @@ public class ThemePreviewActivity extends BaseFragment implements DownloadContro
                         int viewHeight = getMeasuredHeight();
                         float scaleX = (float) getMeasuredWidth() / (float) background.getIntrinsicWidth();
                         float scaleY = (float) (viewHeight) / (float) background.getIntrinsicHeight();
-                        float scale = scaleX < scaleY ? scaleY : scaleX;
+                        float scale = Math.max(scaleX, scaleY);
                         int width = (int) Math.ceil(background.getIntrinsicWidth() * scale * parallaxScale);
                         int height = (int) Math.ceil(background.getIntrinsicHeight() * scale * parallaxScale);
                         int x = (getMeasuredWidth() - width) / 2;
@@ -1630,6 +1630,9 @@ public class ThemePreviewActivity extends BaseFragment implements DownloadContro
             saveButtonsContainer.addView(doneButton, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.MATCH_PARENT, Gravity.TOP | Gravity.RIGHT));
             doneButton.setOnClickListener(v -> {
                 Theme.ThemeInfo previousTheme = Theme.getPreviousTheme();
+                if (previousTheme == null) {
+                    return;
+                }
                 Theme.ThemeAccent previousAccent;
                 if (previousTheme != null && previousTheme.prevAccentId >= 0) {
                     previousAccent = previousTheme.themeAccentsMap.get(previousTheme.prevAccentId);
@@ -2717,7 +2720,7 @@ public class ThemePreviewActivity extends BaseFragment implements DownloadContro
         }
     }
 
-    public class DialogsAdapter extends RecyclerListView.SelectionAdapter {
+    public static class DialogsAdapter extends RecyclerListView.SelectionAdapter {
 
         private Context mContext;
 

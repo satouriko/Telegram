@@ -25,12 +25,28 @@ public class FileRefController extends BaseController {
         private long firstQueryTime;
     }
 
+    private static class Waiter {
+
+        private String locationKey;
+        private String parentKey;
+
+        public Waiter(String loc, String parent) {
+            locationKey = loc;
+            parentKey = parent;
+        }
+    }
+
     private HashMap<String, ArrayList<Requester>> locationRequester = new HashMap<>();
     private HashMap<String, ArrayList<Requester>> parentRequester = new HashMap<>();
     private HashMap<String, CachedResult> responseCache = new HashMap<>();
     private HashMap<TLRPC.TL_messages_sendMultiMedia, Object[]> multiMediaCache = new HashMap<>();
 
     private long lastCleanupTime = SystemClock.elapsedRealtime();
+
+    private ArrayList<Waiter> wallpaperWaiters = new ArrayList<>();
+    private ArrayList<Waiter> savedGifsWaiters = new ArrayList<>();
+    private ArrayList<Waiter> recentStickersWaiter = new ArrayList<>();
+    private ArrayList<Waiter> favStickersWaiter = new ArrayList<>();
 
     private static volatile FileRefController[] Instance = new FileRefController[UserConfig.MAX_ACCOUNT_COUNT];
 
@@ -241,8 +257,22 @@ public class FileRefController extends BaseController {
             return;
         }
 
+        String cacheKey = locationKey;
+        if (parentObject instanceof String) {
+            String string = (String) parentObject;
+            if ("wallpaper".equals(string)) {
+                cacheKey = "wallpaper";
+            } else if (string.startsWith("gif")) {
+                cacheKey = "gif";
+            } else if ("recent".equals(string)) {
+                cacheKey = "recent";
+            } else if ("fav".equals(string)) {
+                cacheKey = "fav";
+            }
+        }
+
         cleanupCache();
-        CachedResult cachedResult = getCachedResponse(locationKey);
+        CachedResult cachedResult = getCachedResponse(cacheKey);
         if (cachedResult != null) {
             if (!onRequestComplete(locationKey, parentKey, cachedResult.response, false)) {
                 responseCache.remove(locationKey);
@@ -261,6 +291,14 @@ public class FileRefController extends BaseController {
         }
 
         requestReferenceFromServer(parentObject, locationKey, parentKey, args);
+    }
+
+    private void broadcastWaitersData(ArrayList<Waiter> waiters, TLObject response) {
+        for (int a = 0, N = waiters.size(); a < N; a++) {
+            Waiter waiter = waiters.get(a);
+            onRequestComplete(waiter.locationKey, waiter.parentKey, response, a == N - 1);
+        }
+        waiters.clear();
     }
 
     private void requestReferenceFromServer(Object parentObject, String locationKey, String parentKey, Object[] args) {
@@ -324,17 +362,29 @@ public class FileRefController extends BaseController {
         } else if (parentObject instanceof String) {
             String string = (String) parentObject;
             if ("wallpaper".equals(string)) {
-                TLRPC.TL_account_getWallPapers req = new TLRPC.TL_account_getWallPapers();
-                getConnectionsManager().sendRequest(req, (response, error) -> onRequestComplete(locationKey, parentKey, response, true));
+                if (wallpaperWaiters.isEmpty()) {
+                    TLRPC.TL_account_getWallPapers req = new TLRPC.TL_account_getWallPapers();
+                    getConnectionsManager().sendRequest(req, (response, error) -> broadcastWaitersData(wallpaperWaiters, response));
+                }
+                wallpaperWaiters.add(new Waiter(locationKey, parentKey));
             } else if (string.startsWith("gif")) {
-                TLRPC.TL_messages_getSavedGifs req = new TLRPC.TL_messages_getSavedGifs();
-                getConnectionsManager().sendRequest(req, (response, error) -> onRequestComplete(locationKey, parentKey, response, true));
+                if (savedGifsWaiters.isEmpty()) {
+                    TLRPC.TL_messages_getSavedGifs req = new TLRPC.TL_messages_getSavedGifs();
+                    getConnectionsManager().sendRequest(req, (response, error) -> broadcastWaitersData(savedGifsWaiters, response));
+                }
+                savedGifsWaiters.add(new Waiter(locationKey, parentKey));
             } else if ("recent".equals(string)) {
-                TLRPC.TL_messages_getRecentStickers req = new TLRPC.TL_messages_getRecentStickers();
-                getConnectionsManager().sendRequest(req, (response, error) -> onRequestComplete(locationKey, parentKey, response, true));
+                if (recentStickersWaiter.isEmpty()) {
+                    TLRPC.TL_messages_getRecentStickers req = new TLRPC.TL_messages_getRecentStickers();
+                    getConnectionsManager().sendRequest(req, (response, error) -> broadcastWaitersData(recentStickersWaiter, response));
+                }
+                recentStickersWaiter.add(new Waiter(locationKey, parentKey));
             } else if ("fav".equals(string)) {
-                TLRPC.TL_messages_getFavedStickers req = new TLRPC.TL_messages_getFavedStickers();
-                getConnectionsManager().sendRequest(req, (response, error) -> onRequestComplete(locationKey, parentKey, response, true));
+                if (favStickersWaiter.isEmpty()) {
+                    TLRPC.TL_messages_getFavedStickers req = new TLRPC.TL_messages_getFavedStickers();
+                    getConnectionsManager().sendRequest(req, (response, error) -> broadcastWaitersData(favStickersWaiter, response));
+                }
+                favStickersWaiter.add(new Waiter(locationKey, parentKey));
             } else if (string.startsWith("avatar_")) {
                 int id = Utilities.parseInt(string);
                 if (id > 0) {
@@ -539,6 +589,16 @@ public class FileRefController extends BaseController {
 
     private boolean onRequestComplete(String locationKey, String parentKey, TLObject response, boolean cache) {
         boolean found = false;
+        String cacheKey = parentKey;
+        if (response instanceof TLRPC.TL_account_wallPapers) {
+            cacheKey = "wallpaper";
+        } else if (response instanceof TLRPC.TL_messages_savedGifs) {
+            cacheKey = "gif";
+        } else if (response instanceof TLRPC.TL_messages_recentStickers) {
+            cacheKey = "recent";
+        } else if (response instanceof TLRPC.TL_messages_favedStickers) {
+            cacheKey = "fav";
+        }
         if (parentKey != null) {
             ArrayList<Requester> arrayList = parentRequester.get(parentKey);
             if (arrayList != null) {
@@ -552,7 +612,7 @@ public class FileRefController extends BaseController {
                     }
                 }
                 if (found) {
-                    putReponseToCache(parentKey, response);
+                    putReponseToCache(cacheKey, response);
                 }
                 parentRequester.remove(parentKey);
             }
@@ -564,6 +624,7 @@ public class FileRefController extends BaseController {
         if (arrayList == null) {
             return found;
         }
+        cacheKey = locationKey;
         for (int q = 0, N = arrayList.size(); q < N; q++) {
             Requester requester = arrayList.get(q);
             if (requester.completed) {
@@ -608,13 +669,13 @@ public class FileRefController extends BaseController {
                                         }
                                     }
                                 }
-                                getMessagesStorage().replaceMessageIfExists(message, currentAccount, res.users, res.chats, false);
+                                getMessagesStorage().replaceMessageIfExists(message, res.users, res.chats, false);
                             }
                             break;
                         }
                     }
                     if (result == null) {
-                        getMessagesStorage().replaceMessageIfExists(res.messages.get(0), currentAccount, res.users, res.chats,true);
+                        getMessagesStorage().replaceMessageIfExists(res.messages.get(0), res.users, res.chats,true);
                         if (BuildVars.DEBUG_VERSION) {
                             FileLog.d("file ref not found in messages, replacing message");
                         }
@@ -757,7 +818,7 @@ public class FileRefController extends BaseController {
         }
         locationRequester.remove(locationKey);
         if (found) {
-            putReponseToCache(locationKey, response);
+            putReponseToCache(cacheKey, response);
         }
         return found;
     }
