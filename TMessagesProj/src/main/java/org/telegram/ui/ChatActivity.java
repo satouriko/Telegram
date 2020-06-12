@@ -15285,7 +15285,7 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
         updatePinnedMessageView(true);
         updateVisibleRows();
 
-        if (!messageObject.scheduled && !UserConfig.getInstance(currentAccount).isBot) {
+        if (!messageObject.scheduled && !getUserConfig().isBot) {
             TLRPC.TL_messages_getMessageEditData req = new TLRPC.TL_messages_getMessageEditData();
             req.peer = getMessagesController().getInputPeer((int) dialog_id);
             req.id = messageObject.getId();
@@ -15901,14 +15901,14 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
                 }
                 break;
             } case 90: {
-                TLRPC.User user = MessagesController.getInstance(currentAccount).getUser(selectedObject.messageOwner.from_id);
+                TLRPC.User user = getMessagesController().getUser(selectedObject.messageOwner.from_id);
                 getMediaDataController().searchMessagesInChat("", dialog_id, mergeDialogId, classGuid, 0, user);
                 showMessagesSearchListView(true);
                 break;
             } case 92: {
-                TLRPC.User user = MessagesController.getInstance(currentAccount).getUser(selectedObject.messageOwner.from_id);
+                TLRPC.User user = getMessagesController().getUser(selectedObject.messageOwner.from_id);
                 if (user.username != null) {
-                    SendMessagesHelper.getInstance(currentAccount).sendMessage("/prpr@" + user.username, dialog_id, selectedObject, null, false,
+                    getSendMessagesHelper().sendMessage("/prpr@" + user.username, dialog_id, selectedObject, null, false,
                             null, null, null, true, 0);
                 } else {
                     SpannableString spannableString = new SpannableString("/prpr@" + user.first_name);
@@ -15924,7 +15924,7 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
                         }
                     }
                     ArrayList<TLRPC.MessageEntity> entities = getMediaDataController().getEntities(cs, supportsSendingNewEntities);
-                    SendMessagesHelper.getInstance(currentAccount).sendMessage(spannableString.toString(), dialog_id, selectedObject, null, false,
+                    getSendMessagesHelper().sendMessage(spannableString.toString(), dialog_id, selectedObject, null, false,
                             entities, null, null, true, 0);
                 }
                 break;
@@ -16067,7 +16067,7 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
                                 toSend.append(c);
                             }
                         }
-                        SendMessagesHelper.getInstance(currentAccount).sendMessage(toSend.toString(), dialog_id, selectedObject, null, false,
+                        getSendMessagesHelper().sendMessage(toSend.toString(), dialog_id, selectedObject, null, false,
                                 null, null, null, true, 0);
                         return true;
                     }
@@ -17590,7 +17590,7 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
             } else if (position >= messagesStartRow && position < messagesEndRow) {
                 MessageObject message = messages.get(position - messagesStartRow);
                 View view = holder.itemView;
-                boolean fromUserBlocked = MessagesController.getInstance(currentAccount).blockedUsers.indexOfKey(message.getFromId()) >= 0 && NekoConfig.ignoreBlocked;
+                boolean fromUserBlocked = getMessagesController().blockedUsers.indexOfKey(message.getFromId()) >= 0 && NekoConfig.ignoreBlocked;
 
                 if (view instanceof ChatMessageCell) {
                     final ChatMessageCell messageCell = (ChatMessageCell) view;
@@ -18799,7 +18799,7 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
                 continue;
             }
             final TLRPC.ChannelParticipant channelParticipant;
-            TLRPC.User user = MessagesController.getInstance(currentAccount).getUser(participant.user_id);
+            TLRPC.User user = getMessagesController().getUser(participant.user_id);
             if (ChatObject.isChannel(currentChat)) {
                 channelParticipant = ((TLRPC.TL_chatChannelParticipant) participant).channelParticipant;
             } else {

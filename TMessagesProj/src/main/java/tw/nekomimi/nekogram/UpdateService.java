@@ -11,6 +11,7 @@ import androidx.core.app.NotificationCompat;
 import androidx.core.content.FileProvider;
 
 import org.telegram.messenger.AccountInstance;
+import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.ApplicationLoader;
 import org.telegram.messenger.BuildConfig;
 import org.telegram.messenger.FileLoader;
@@ -63,13 +64,7 @@ public class UpdateService extends Service implements NotificationCenter.Notific
 
         Intent installIntent = new Intent(Intent.ACTION_VIEW);
         installIntent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-        File f = null;
-        if (updateRef.message.attachPath != null && updateRef.message.attachPath.length() != 0) {
-            f = new File(updateRef.message.attachPath);
-        }
-        if (f == null || !f.exists()) {
-            f = FileLoader.getPathToMessage(updateRef.message);
-        }
+        File f = AndroidUtilities.getMessageAttachment(updateRef.message);
         installIntent.setDataAndType(FileProvider.getUriForFile(this,
                 BuildConfig.APPLICATION_ID + ".provider", f), "application/vnd.android.package-archive");
         PendingIntent installPendingIntent = PendingIntent.getActivity(this, 500, installIntent, 0);

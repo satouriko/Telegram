@@ -2463,6 +2463,17 @@ public class AndroidUtilities {
         return key_hash;
     }
 
+    public static File getMessageAttachment(TLRPC.Message messageOwner) {
+        File f = null;
+        if (messageOwner.attachPath != null && messageOwner.attachPath.length() != 0) {
+            f = new File(messageOwner.attachPath);
+        }
+        if (f == null || !f.exists()) {
+            f = FileLoader.getPathToMessage(messageOwner);
+        }
+        return f;
+    }
+
     public static void openDocument(MessageObject message, Activity activity, BaseFragment parentFragment) {
         if (message == null) {
             return;
@@ -2471,14 +2482,8 @@ public class AndroidUtilities {
         if (document == null) {
             return;
         }
-        File f = null;
         String fileName = message.messageOwner.media != null ? FileLoader.getAttachFileName(document) : "";
-        if (message.messageOwner.attachPath != null && message.messageOwner.attachPath.length() != 0) {
-            f = new File(message.messageOwner.attachPath);
-        }
-        if (f == null || f != null && !f.exists()) {
-            f = FileLoader.getPathToMessage(message.messageOwner);
-        }
+        File f = getMessageAttachment(message.messageOwner);
         if (f != null && f.exists()) {
             if (parentFragment != null && f.getName().toLowerCase().endsWith("attheme")) {
                 Theme.ThemeInfo themeInfo = Theme.applyThemeFile(f, message.getDocumentName(), null, true);
