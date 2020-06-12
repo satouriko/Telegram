@@ -261,7 +261,7 @@ public class NekoSettingsActivity extends BaseFragment implements UpdateHelper.U
             } else if (position == sourceCodeRow) {
                 Browser.openUrl(getParentActivity(), "https://github.com/rikakomoe/Nekogram-Lite");
             } else if (position == checkUpdateRow) {
-                UpdateHelper.getInstance(currentAccount).checkNewVersionAvailable(this, false);
+                UpdateHelper.getInstance().checkNewVersionAvailable(this, false);
                 checkingUpdate = true;
                 listAdapter.notifyItemChanged(checkUpdateRow);
             }

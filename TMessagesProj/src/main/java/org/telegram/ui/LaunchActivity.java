@@ -3075,7 +3075,7 @@ public class LaunchActivity extends Activity implements ActionBarLayout.ActionBa
         } else if (UserConfig.getInstance(0).pendingAppUpdate != null) {
             showUpdateActivity(UserConfig.selectedAccount, UserConfig.getInstance(0).pendingAppUpdate, true);
         }
-        UpdateHelper.getInstance(currentAccount).checkNewVersionAvailable(this, true);
+        UpdateHelper.getInstance().checkNewVersionAvailable(this, true);
         checkAppUpdate(false);
     }
 

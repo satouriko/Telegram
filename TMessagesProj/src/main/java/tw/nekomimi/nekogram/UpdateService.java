@@ -32,7 +32,7 @@ public class UpdateService extends Service implements NotificationCenter.Notific
 
     public UpdateHelper getUpdateHelper() {
         if (updateHelper == null) {
-            updateHelper = UpdateHelper.getInstance(UserConfig.selectedAccount);
+            updateHelper = UpdateHelper.getInstance();
         }
         return updateHelper;
     }
