@@ -344,7 +344,7 @@ public class ContactsController extends BaseController {
             readContacts();
             if (systemAccount == null) {
                 try {
-                    systemAccount = new Account("" + UserConfig.getInstance(currentAccount).getClientUserId(), "com.cool2645.nekolite");
+                    systemAccount = new Account("" + getUserConfig().getClientUserId(), "com.cool2645.nekolite");
                     am.addAccountExplicitly(systemAccount, "", null);
                 } catch (Exception ignore) {
 

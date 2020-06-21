@@ -3154,6 +3154,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
         }
         if (prevWidth != layoutParams.width) {
             onlineTextView[1].requestLayout();
+            onlineTextView[2].requestLayout();
         }
 
         width2 = idTextView.getPaint().measureText(idTextView.getText().toString());
