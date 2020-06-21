@@ -4083,7 +4083,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
             onlineTextOverride = null;
         }
 
-        int id = 0;
+        long id = 0;
         if (user_id != 0) {
             TLRPC.User user = MessagesController.getInstance(currentAccount).getUser(user_id);
             TLRPC.FileLocation photoBig = null;
@@ -4148,12 +4148,12 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                 nameTextView[a].setRightDrawable(rightIcon);
             }
 
-            if (user.photo != null && user.photo.dc_id != 0) {
-                idTextView.setText("ID: " + user_id + ", DC: " + user.photo.dc_id);
-            } else {
-                idTextView.setText("ID: " + user_id);
-            }
             id = user_id;
+            if (user.photo != null && user.photo.dc_id != 0) {
+                idTextView.setText("ID: " + id + ", DC: " + user.photo.dc_id);
+            } else {
+                idTextView.setText("ID: " + id);
+            }
             avatarImage.getImageReceiver().setVisible(!PhotoViewer.isShowingImage(photoBig), false);
         } else if (chat_id != 0) {
             TLRPC.Chat chat = MessagesController.getInstance(currentAccount).getChat(chat_id);
@@ -4279,7 +4279,6 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                     }
                 }
             }
-            id = chat_id;
             if (changed) {
                 needLayout();
             }
@@ -4295,14 +4294,19 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
             avatarImage.setImage(thumbLocation, "50_50", avatarDrawable, chat);
             FileLoader.getInstance(currentAccount).loadFile(imageLocation, chat, null, 0, 1);
             avatarImage.getImageReceiver().setVisible(!PhotoViewer.isShowingImage(photoBig), false);
-            if (chat.photo != null && chat.photo.dc_id != 0) {
-                idTextView.setText("ID: " + chat_id + ", DC: " + chat.photo.dc_id);
+            if (ChatObject.isChannel(chat)) {
+                id = -1000000000000L - chat.id;
             } else {
-                idTextView.setText("ID: " + chat_id);
+                id = - chat.id;
+            }
+            if (chat.photo != null && chat.photo.dc_id != 0) {
+                idTextView.setText("ID: " + id + ", DC: " + chat.photo.dc_id);
+            } else {
+                idTextView.setText("ID: " + id);
             }
         }
         if (id != 0) {
-            int finalId = id;
+            long finalId = id;
             idTextView.setOnLongClickListener(v -> {
                 AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
                 builder.setItems(new CharSequence[]{LocaleController.getString("Copy", R.string.Copy)}, (dialogInterface, i) -> {
