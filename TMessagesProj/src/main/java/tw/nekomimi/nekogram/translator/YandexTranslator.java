@@ -112,16 +112,8 @@ public class YandexTranslator extends Translator {
             }
         }
         String result = new String(outbuf.toByteArray());
-        try {
-            httpConnectionStream.close();
-        } catch (Throwable e) {
-            FileLog.e(e);
-        }
-        try {
-            outbuf.close();
-        } catch (Exception ignore) {
-
-        }
+        httpConnectionStream.close();
+        outbuf.close();
         return result;
 
     }

@@ -6,7 +6,6 @@
     <string name="NekogramBeta">Nekogram Beta</string>
     <string name="NekogramWithEmoji">&#128566; Nekogram</string>
     <string name="NekogramEmojiDialogs">&#128566;</string>
-    <string name="NekogramEmojiDialogsUnread">&#129300;</string>
     <string name="NekoSettings">Neko Settings</string>
     <string name="IPv6">Try connecting through IPv6</string>
     <string name="MessageMenu">Message menu</string>
@@ -46,11 +45,7 @@
     <string name="TranslationProvider">Translation provider</string>
     <string name="ProviderGoogleTranslate">Google Translate</string>
     <string name="ProviderYandex">Yandex Translate</string>
-    <string name="ProviderGoogleTranslateWeb">Google Translate (Web)</string>
     <string name="ProviderGoogleTranslateCN">Google Translate CN</string>
-    <string name="ProviderGoogleTranslateCNWeb">Google Translate CN (Web)</string>
-    <string name="ProviderBaiduFanyiWeb">Baidu Translate (Web)</string>
-    <string name="ProviderDeepLWeb">DeepL Translator (Web)</string>
     <string name="TranslateApiUnsupported">The translation provider you selected don\'t support your language</string>
     <string name="ProviderLingocloud">Lingocloud</string>
     <string name="UndoTranslate">Undo translate</string>
