@@ -38,8 +38,6 @@
     <string name="UnlimitedFavoredStickers">Unlimited favored stickers</string>
     <string name="UnlimitedFavoredStickersAbout">Add unlimited stickers to favorites. Stickers may not be synchronized to other devices.</string>
     <string name="Translate">Translate</string>
-    <string name="JoinedFormatted">joined %1$s</string>
-    <string name="JoinedDateFormatted">joined on %1$s</string>
     <string name="TranslateFailed">Translate server error</string>
     <string name="TranslationProvider">Translation provider</string>
     <string name="ProviderGoogleTranslate">Google Translate</string>

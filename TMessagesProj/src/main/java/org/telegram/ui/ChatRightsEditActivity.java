@@ -1093,11 +1093,11 @@ public class ChatRightsEditActivity extends BaseFragment {
                     if (participant instanceof TLRPC.TL_channelParticipantCreator) {
                         status = LocaleController.getString("ChannelCreator", R.string.ChannelCreator);
                     } else if (participant instanceof TLRPC.TL_channelParticipantAdmin) {
-                        status = LocaleController.formatDateJoined(((TLRPC.TL_channelParticipantAdmin) participant).date);
+                        status = LocaleController.formatJoined(((TLRPC.TL_channelParticipantAdmin) participant).date);
                     } else if (participant instanceof TLRPC.TL_channelParticipant) {
-                        status = LocaleController.formatDateJoined(((TLRPC.TL_channelParticipant) participant).date);
+                        status = LocaleController.formatJoined(((TLRPC.TL_channelParticipant) participant).date);
                     } else if (participant instanceof TLRPC.TL_chatChannelParticipant) {
-                        status = LocaleController.formatDateJoined(((TLRPC.TL_chatChannelParticipant) participant).date);
+                        status = LocaleController.formatJoined(((TLRPC.TL_chatChannelParticipant) participant).date);
                     }
                     userCell2.setData(currentUser, null, status, 0);
                     break;

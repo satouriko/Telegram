@@ -36,8 +36,6 @@
     <string name="UnlimitedFavoredStickers">無制限のお気に入りのステッカー</string>
     <string name="UnlimitedFavoredStickersAbout">お気に入りに無制限のステッカーを追加します。ステッカーは他の端末と同期されない場合があります。</string>
     <string name="Translate">翻訳</string>
-    <string name="JoinedFormatted">%1$s に参加</string>
-    <string name="JoinedDateFormatted">%1$s に参加</string>
     <string name="TranslateFailed">翻訳サーバーエラー</string>
     <string name="TranslationProvider">翻訳元</string>
     <string name="ProviderGoogleTranslate">Google 翻訳</string>

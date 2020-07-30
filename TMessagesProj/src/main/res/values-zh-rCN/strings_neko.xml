@@ -35,8 +35,6 @@
     <string name="UnlimitedFavoredStickers">无限的收藏贴纸</string>
     <string name="UnlimitedFavoredStickersAbout">向收藏夹添加无限贴纸，贴纸可能将不能同步到其它设备。</string>
     <string name="Translate">翻译</string>
-    <string name="JoinedFormatted">%1$s 加入</string>
-    <string name="JoinedDateFormatted">%1$s 加入</string>
     <string name="TranslateFailed">翻译服务器错误</string>
     <string name="TranslationProvider">翻译源</string>
     <string name="ProviderGoogleTranslate">Google 翻译</string>

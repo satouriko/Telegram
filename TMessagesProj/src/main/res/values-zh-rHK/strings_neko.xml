@@ -36,8 +36,6 @@
     <string name="UnlimitedFavoredStickers">無限的收藏貼圖</string>
     <string name="UnlimitedFavoredStickersAbout">向收藏夾添加無限貼圖，貼圖可能將不能同步到其它裝置。</string>
     <string name="Translate">翻譯</string>
-    <string name="JoinedFormatted">%1$s 加入</string>
-    <string name="JoinedDateFormatted">%1$s 加入</string>
     <string name="TranslateFailed">翻譯服務器錯誤</string>
     <string name="TranslationProvider">翻譯源</string>
     <string name="ProviderGoogleTranslate">Google 翻譯</string>
