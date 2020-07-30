@@ -11,7 +11,6 @@
     <string name="DeleteAllFromSelfAlert">警告！这将为此会话中的 **所有人** 删除 **全部你发出的消息**。</string>
     <string name="BotLogin">机器人登录</string>
     <string name="InvalidAccessToken">无效的访问令牌</string>
-    <string name="IgnoreBlocked">忽略渣滓们在群里说的话</string>
     <string name="Connection">连接</string>
     <string name="Chat">聊天</string>
     <string name="NoQuoteForward">无引用转发</string>

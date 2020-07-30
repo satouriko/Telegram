@@ -78,7 +78,6 @@ public class NekoSettingsActivity extends BaseFragment implements UpdateHelper.U
 
     private int chatRow;
     private int useSystemEmojiRow;
-    private int ignoreBlockedRow;
     private int saveCacheToPrivateDirectoryRow;
     private int pauseMusicOnRecordRow;
     private int rearVideoMessagesRow;
@@ -160,11 +159,6 @@ public class NekoSettingsActivity extends BaseFragment implements UpdateHelper.U
                 NekoConfig.toggleForceTablet();
                 if (view instanceof TextCheckCell) {
                     ((TextCheckCell) view).setChecked(NekoConfig.forceTablet);
-                }
-            } else if (position == ignoreBlockedRow) {
-                NekoConfig.toggleIgnoreBlocked();
-                if (view instanceof TextCheckCell) {
-                    ((TextCheckCell) view).setChecked(NekoConfig.ignoreBlocked);
                 }
             } else if (position == saveCacheToPrivateDirectoryRow) {
                 NekoConfig.toggleSaveCacheToPrivateDirectory();
@@ -287,7 +281,6 @@ public class NekoSettingsActivity extends BaseFragment implements UpdateHelper.U
         connection2Row = rowCount++;
         chatRow = rowCount++;
         useSystemEmojiRow = rowCount++;
-        ignoreBlockedRow = rowCount++;
         pauseMusicOnRecordRow = rowCount++;
         rearVideoMessagesRow = rowCount++;
         mapPreviewRow = rowCount++;
@@ -601,8 +594,6 @@ public class NekoSettingsActivity extends BaseFragment implements UpdateHelper.U
                         textCell.setTextAndCheck(LocaleController.getString("SaveCacheToPrivateDirectory", R.string.SaveCacheToPrivateDirectory), NekoConfig.saveCacheToPrivateDirectory, true);
                     } else if (position == useSystemEmojiRow) {
                         textCell.setTextAndCheck(LocaleController.getString("EmojiUseDefault", R.string.EmojiUseDefault), SharedConfig.useSystemEmoji, true);
-                    } else if (position == ignoreBlockedRow) {
-                        textCell.setTextAndCheck(LocaleController.getString("IgnoreBlocked", R.string.IgnoreBlocked), NekoConfig.ignoreBlocked, true);
                     } else if (position == forceTabletRow) {
                         textCell.setTextAndCheck(LocaleController.getString("ForceTabletMode", R.string.ForceTabletMode), NekoConfig.forceTablet, false);
                     } else if (position == disableFilteringRow) {
@@ -661,7 +652,7 @@ public class NekoSettingsActivity extends BaseFragment implements UpdateHelper.U
         @Override
         public boolean isEnabled(RecyclerView.ViewHolder holder) {
             int position = holder.getAdapterPosition();
-            return position == ignoreBlockedRow || position == useSystemEmojiRow || position == ipv6Row ||
+            return position == useSystemEmojiRow || position == ipv6Row ||
                     position == forceTabletRow || position == mapPreviewRow ||
                     position == saveCacheToPrivateDirectoryRow || (position == disableFilteringRow && sensitiveCanChange) ||
                     position == unlimitedFavedStickersRow || position == messageMenuRow || position == rearVideoMessagesRow ||
@@ -715,8 +706,7 @@ public class NekoSettingsActivity extends BaseFragment implements UpdateHelper.U
                 return 1;
             } else if (position == mapPreviewRow || position == messageMenuRow || position == translationProviderRow) {
                 return 2;
-            } else if (position == ipv6Row || position == ignoreBlockedRow ||
-                    position == useSystemEmojiRow || position == forceTabletRow ||
+            } else if (position == ipv6Row || position == useSystemEmojiRow || position == forceTabletRow ||
                     position == saveCacheToPrivateDirectoryRow || position == unlimitedFavedStickersRow ||
                     position == disableFilteringRow || position == smoothKeyboardRow ||
                     position == pauseMusicOnRecordRow|| position == rearVideoMessagesRow) {

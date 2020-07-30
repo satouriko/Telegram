@@ -13,7 +13,7 @@ public class NekoConfig {
 
     private static final Object sync = new Object();
     public static boolean useIPv6 = false;
-    public static boolean ignoreBlocked = false;
+    public static final boolean ignoreBlocked = true;
     public static boolean forceTablet = false;
     public static boolean rearVideoMessages = false;
     public static int mapPreviewProvider = 0;
@@ -45,7 +45,6 @@ public class NekoConfig {
                 SharedPreferences preferences = ApplicationLoader.applicationContext.getSharedPreferences("nekoconfing", Context.MODE_PRIVATE);
                 SharedPreferences.Editor editor = preferences.edit();
                 editor.putBoolean("useIPv6", useIPv6);
-                editor.putBoolean("ignoreBlocked", ignoreBlocked);
                 editor.putBoolean("forceTablet", forceTablet);
                 editor.putInt("mapPreviewProvider", mapPreviewProvider);
                 editor.putBoolean("residentNotification", residentNotification);
@@ -77,7 +76,6 @@ public class NekoConfig {
 
             SharedPreferences preferences = ApplicationLoader.applicationContext.getSharedPreferences("nekoconfig", Activity.MODE_PRIVATE);
             useIPv6 = preferences.getBoolean("useIPv6", false);
-            ignoreBlocked = preferences.getBoolean("ignoreBlocked", false);
             forceTablet = preferences.getBoolean("forceTablet", false);
             mapPreviewProvider = preferences.getInt("mapPreviewProvider", 0);
             residentNotification = preferences.getBoolean("residentNotification", false);
@@ -151,14 +149,6 @@ public class NekoConfig {
         SharedPreferences preferences = ApplicationLoader.applicationContext.getSharedPreferences("nekoconfig", Activity.MODE_PRIVATE);
         SharedPreferences.Editor editor = preferences.edit();
         editor.putBoolean("useIPv6", useIPv6);
-        editor.commit();
-    }
-
-    public static void toggleIgnoreBlocked() {
-        ignoreBlocked = !ignoreBlocked;
-        SharedPreferences preferences = ApplicationLoader.applicationContext.getSharedPreferences("nekoconfig", Activity.MODE_PRIVATE);
-        SharedPreferences.Editor editor = preferences.edit();
-        editor.putBoolean("ignoreBlocked", ignoreBlocked);
         editor.commit();
     }
 
