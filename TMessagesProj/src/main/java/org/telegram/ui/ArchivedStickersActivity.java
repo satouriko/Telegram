@@ -219,7 +219,7 @@ public class ArchivedStickersActivity extends BaseFragment implements Notificati
     private void processResponse(TLRPC.TL_messages_archivedStickers res) {
         if (!isInTransition) {
             sets.addAll(res.sets);
-            endReached = res.sets.size() != 15;
+            endReached = res.sets.size() == 0;
             loadingStickers = false;
             firstLoaded = true;
             if (emptyView != null) {
