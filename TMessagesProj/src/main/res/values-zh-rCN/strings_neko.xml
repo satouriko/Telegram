@@ -63,4 +63,5 @@
     <string name="DownloadingUpdateFinish">应用更新下载完毕，点击安装</string>
     <string name="DownloadingUpdateFail">应用更新下载失败</string>
     <string name="ClickToRetry">点击重试下载。</string>
+    <string name="MapDriftingFix">中国大陆地图定位漂移修复</string>
 </resources>

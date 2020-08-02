@@ -28,7 +28,7 @@ public class NekoConfig {
     public static boolean showChangePermissions = false;
     public static boolean showDeleteDownloadedFile = false;
     public static boolean showTranslate = true;
-
+    public static boolean mapDriftingFix = false;
     public static int translationProvider = 1;
 
     public static long lastSuccessfulCheckUpdateTime = 0;
@@ -95,6 +95,7 @@ public class NekoConfig {
             rearVideoMessages = preferences.getBoolean("rearVideoMessages", false);
             lastSuccessfulCheckUpdateTime = preferences.getLong("lastSuccessfulCheckUpdateTime", 0);
             themeVersion = preferences.getInt("themeVersion", 0);
+            mapDriftingFix = preferences.getBoolean("mapDriftingFix", false);
             configLoaded = true;
         }
     }
@@ -239,6 +240,14 @@ public class NekoConfig {
         SharedPreferences preferences = ApplicationLoader.applicationContext.getSharedPreferences("nekoconfig", Activity.MODE_PRIVATE);
         SharedPreferences.Editor editor = preferences.edit();
         editor.putLong("lastSuccessfulCheckUpdateTime", lastSuccessfulCheckUpdateTime);
+        editor.commit();
+    }
+
+    public static void toggleMapDriftingFix() {
+        mapDriftingFix = !mapDriftingFix;
+        SharedPreferences preferences = ApplicationLoader.applicationContext.getSharedPreferences("nekoconfig", Activity.MODE_PRIVATE);
+        SharedPreferences.Editor editor = preferences.edit();
+        editor.putBoolean("mapDriftingFix", mapDriftingFix);
         editor.commit();
     }
 }

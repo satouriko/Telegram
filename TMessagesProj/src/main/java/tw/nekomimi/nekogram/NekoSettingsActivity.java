@@ -88,6 +88,7 @@ public class NekoSettingsActivity extends BaseFragment implements UpdateHelper.U
 
     private int experimentRow;
     private int smoothKeyboardRow;
+    private int mapDriftingFixRow;
     private int disableFilteringRow;
     private int unlimitedFavedStickersRow;
     private int forceTabletRow;
@@ -247,6 +248,11 @@ public class NekoSettingsActivity extends BaseFragment implements UpdateHelper.U
                 if (SharedConfig.smoothKeyboard && getParentActivity() != null) {
                     getParentActivity().getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_PAN);
                 }
+            } else if (position == mapDriftingFixRow) {
+                NekoConfig.toggleMapDriftingFix();
+                if (view instanceof TextCheckCell) {
+                    ((TextCheckCell) view).setChecked(NekoConfig.mapDriftingFix);
+                }
             } else if (position == rearVideoMessagesRow) {
                 NekoConfig.toggleRearVideoMessages();
                 if (view instanceof TextCheckCell) {
@@ -290,6 +296,7 @@ public class NekoSettingsActivity extends BaseFragment implements UpdateHelper.U
         experimentRow = rowCount++;
         saveCacheToPrivateDirectoryRow = Build.VERSION.SDK_INT >= 24 ? rowCount++ : -1;
         smoothKeyboardRow = !AndroidUtilities.isTablet() ? rowCount++ : -1;
+        mapDriftingFixRow = rowCount++;
         disableFilteringRow = rowCount++;
         unlimitedFavedStickersRow = rowCount++;
         forceTabletRow = rowCount++;
@@ -614,6 +621,8 @@ public class NekoSettingsActivity extends BaseFragment implements UpdateHelper.U
                         textCell.setTextAndCheck(LocaleController.getString("DebugMenuEnableSmoothKeyboard", R.string.DebugMenuEnableSmoothKeyboard), SharedConfig.smoothKeyboard, true);
                     } else if (position == rearVideoMessagesRow) {
                         textCell.setTextAndCheck(LocaleController.getString("RearVideoMessages", R.string.RearVideoMessages), NekoConfig.rearVideoMessages, true);
+                    } else if (position == mapDriftingFixRow) {
+                        textCell.setTextAndCheck(LocaleController.getString("MapDriftingFix", R.string.MapDriftingFix), NekoConfig.mapDriftingFix, true);
                     }
                     break;
                 }
@@ -658,7 +667,7 @@ public class NekoSettingsActivity extends BaseFragment implements UpdateHelper.U
                     position == saveCacheToPrivateDirectoryRow || (position == disableFilteringRow && sensitiveCanChange) ||
                     position == unlimitedFavedStickersRow || position == messageMenuRow || position == rearVideoMessagesRow ||
                     position == translationProviderRow || position == smoothKeyboardRow || position == pauseMusicOnRecordRow ||
-                    position == checkUpdateRow || position == sourceCodeRow;
+                    position == checkUpdateRow || position == sourceCodeRow || position == mapDriftingFixRow;
         }
 
         @Override
@@ -710,7 +719,7 @@ public class NekoSettingsActivity extends BaseFragment implements UpdateHelper.U
             } else if (position == ipv6Row || position == useSystemEmojiRow || position == forceTabletRow ||
                     position == saveCacheToPrivateDirectoryRow || position == unlimitedFavedStickersRow ||
                     position == disableFilteringRow || position == smoothKeyboardRow ||
-                    position == pauseMusicOnRecordRow|| position == rearVideoMessagesRow) {
+                    position == pauseMusicOnRecordRow|| position == rearVideoMessagesRow || position == mapDriftingFixRow) {
                 return 3;
             } else if (position == connectionRow || position == chatRow || position == experimentRow || position == helpRow) {
                 return 4;

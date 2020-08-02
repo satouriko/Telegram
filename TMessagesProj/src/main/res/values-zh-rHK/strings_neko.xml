@@ -64,4 +64,5 @@
     <string name="DownloadingUpdateFinish">應用更新下載完畢，點擊安裝</string>
     <string name="DownloadingUpdateFail">應用更新下載失敗</string>
     <string name="ClickToRetry">點擊重試下載。</string>
+    <string name="MapDriftingFix">中國大陸地圖定位漂移修復</string>
 </resources>
