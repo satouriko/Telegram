@@ -2341,7 +2341,7 @@ public class EmojiView extends FrameLayout implements NotificationCenter.Notific
                 if (gridView == stickersGridView) {
                     gridView.setPadding(0, AndroidUtilities.dp(48 + 4), 0, AndroidUtilities.dp(44));
                 } else if (gridView == gifGridView) {
-                    gridView.setPadding(0, AndroidUtilities.dp(48 + 4), 0, AndroidUtilities.dp(44));
+                    gridView.setPadding(0, AndroidUtilities.dp(4), 0, AndroidUtilities.dp(44));
                 } else if (gridView == emojiGridView) {
                     gridView.setPadding(0, AndroidUtilities.dp(38), 0, AndroidUtilities.dp(44));
                 }
