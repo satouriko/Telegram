@@ -42,7 +42,8 @@ public class UpdateHelper {
     private static volatile UpdateHelper Instance;
     NotificationManager systemNotificationManager = null;
     private static final String NOTIFICATION_CHANNEL_ID = "nekolite-update";
-    private static final String NOTIFICATION_CHANNEL_ID_PROGRESS = "nekolite-update-progress";
+    private static final String NOTIFICATION_CHANNEL_ID_PROGRESS = "nekolite-update-progress-2";
+    private static final String[] NOTIFICATION_CHANNEL_ID_LEGACY = new String[]{"nekolite-update-progress"};
     private static final int NOTIFICATION_ID = 78985;
     UpdateRef updateRef;
 
@@ -307,7 +308,10 @@ public class UpdateHelper {
     public NotificationCompat.Builder createNotificationBuilder(boolean isProgress) {
         String id = isProgress ? NOTIFICATION_CHANNEL_ID_PROGRESS : NOTIFICATION_CHANNEL_ID;
         if (Build.VERSION.SDK_INT > Build.VERSION_CODES.O) {
-            int importance = isProgress ? NotificationManager.IMPORTANCE_DEFAULT : NotificationManager.IMPORTANCE_HIGH;
+            for (String s : NOTIFICATION_CHANNEL_ID_LEGACY) {
+                getSystemNotificationManager().deleteNotificationChannel(s);
+            }
+            int importance = isProgress ? NotificationManager.IMPORTANCE_LOW : NotificationManager.IMPORTANCE_HIGH;
             NotificationChannel notificationChannel = getSystemNotificationManager().getNotificationChannel(id);
             if (notificationChannel == null || notificationChannel.getImportance() != importance) {
                 if (notificationChannel != null) {
@@ -322,6 +326,10 @@ public class UpdateHelper {
                     audioBuilder.setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION);
                     audioBuilder.setUsage(AudioAttributes.USAGE_NOTIFICATION);
                     notificationChannel.setSound(Settings.System.DEFAULT_NOTIFICATION_URI, audioBuilder.build());
+                } else {
+                    notificationChannel.enableLights(false);
+                    notificationChannel.enableVibration(false);
+                    notificationChannel.setSound(null, null);
                 }
                 getSystemNotificationManager().createNotificationChannel(notificationChannel);
             }
