@@ -392,6 +392,8 @@ public class NekoSettingsActivity extends BaseFragment implements UpdateHelper.U
         types.add(Translator.PROVIDER_LINGO);
         arrayList.add(LocaleController.getString("ProviderYandex", R.string.ProviderYandex));
         types.add(Translator.PROVIDER_YANDEX);
+        arrayList.add(LocaleController.getString("ProviderMicrosoft", R.string.ProviderMicrosoft));
+        types.add(Translator.PROVIDER_MICROSOFT);
 
         AlertDialog.Builder builder = new AlertDialog.Builder(context);
         builder.setTitle(LocaleController.getString("TranslationProvider", R.string.TranslationProvider));
@@ -568,6 +570,7 @@ public class NekoSettingsActivity extends BaseFragment implements UpdateHelper.U
                         String value;
                         switch (NekoConfig.translationProvider) {
                             case Translator.PROVIDER_GOOGLE:
+                            default:
                                 value = LocaleController.getString("ProviderGoogleTranslate", R.string.ProviderGoogleTranslate);
                                 break;
                             case Translator.PROVIDER_GOOGLE_CN:
@@ -577,8 +580,10 @@ public class NekoSettingsActivity extends BaseFragment implements UpdateHelper.U
                                 value = LocaleController.getString("ProviderYandex", R.string.ProviderYandex);
                                 break;
                             case Translator.PROVIDER_LINGO:
-                            default:
                                 value = LocaleController.getString("ProviderLingocloud", R.string.ProviderLingocloud);
+                                break;
+                            case Translator.PROVIDER_MICROSOFT:
+                                value = LocaleController.getString("ProviderMicrosoft", R.string.ProviderMicrosoft);
                                 break;
                         }
                         textCell.setTextAndValue(LocaleController.getString("TranslationProvider", R.string.TranslationProvider), value, false);

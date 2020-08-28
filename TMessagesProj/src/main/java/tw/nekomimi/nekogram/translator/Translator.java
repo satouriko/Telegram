@@ -4,6 +4,7 @@ import android.annotation.SuppressLint;
 import android.os.AsyncTask;
 
 import org.json.JSONException;
+import org.telegram.messenger.FileLog;
 import org.telegram.messenger.LocaleController;
 import org.telegram.tgnet.TLRPC;
 
@@ -18,6 +19,8 @@ abstract public class Translator {
     public static final int PROVIDER_GOOGLE_CN = 2;
     public static final int PROVIDER_LINGO = 3;
     public static final int PROVIDER_YANDEX = 4;
+    public static final int PROVIDER_MICROSOFT = 5;
+
 
     public static void translate(Object query, TranslateCallBack translateCallBack) {
         Locale locale = LocaleController.getInstance().currentLocale;
@@ -28,8 +31,27 @@ abstract public class Translator {
                 translator = YandexTranslator.getInstance();
                 toLang = locale.getLanguage();
                 break;
+            case PROVIDER_LINGO:
+                toLang = locale.getLanguage();
+                translator = LingoTranslator.getInstance();
+                break;
+            case PROVIDER_MICROSOFT:
+                if (locale.getLanguage().equals("zh")) {
+                    if (locale.getCountry().toUpperCase().equals("CN") || locale.getCountry().toUpperCase().equals("DUANG")) {
+                        toLang = "zh-Hans";
+                    } else if (locale.getCountry().toUpperCase().equals("TW") || locale.getCountry().toUpperCase().equals("HK")) {
+                        toLang = "zh-Hant";
+                    } else {
+                        toLang = locale.getLanguage();
+                    }
+                } else {
+                    toLang = locale.getLanguage();
+                }
+                translator = MicrosoftTranslator.getInstance();
+                break;
             case PROVIDER_GOOGLE:
             case PROVIDER_GOOGLE_CN:
+            default:
                 if (locale.getLanguage().equals("zh")) {
                     if (locale.getCountry().toUpperCase().equals("CN") || locale.getCountry().toUpperCase().equals("DUANG")) {
                         toLang = "zh-CN";
@@ -42,11 +64,6 @@ abstract public class Translator {
                     toLang = locale.getLanguage();
                 }
                 translator = GoogleWebTranslator.getInstance();
-                break;
-            case PROVIDER_LINGO:
-            default:
-                toLang = locale.getLanguage();
-                translator = LingoTranslator.getInstance();
                 break;
         }
         if (!translator.getTargetLanguages().contains(toLang)) {
@@ -116,6 +133,7 @@ abstract public class Translator {
                     throw new UnsupportedOperationException("Unsupported translation query");
                 }
             } catch (Throwable e) {
+                FileLog.e(e);
                 return e;
             }
         }
