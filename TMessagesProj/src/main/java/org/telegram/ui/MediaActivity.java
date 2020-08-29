@@ -453,7 +453,11 @@ public class MediaActivity extends BaseFragment implements NotificationCenter.No
                                 if (message != null) {
                                     SendMessagesHelper.getInstance(currentAccount).sendMessage(message.toString(), did, null, null, true, null, null, null, true, 0);
                                 }
-                                SendMessagesHelper.getInstance(currentAccount).sendMessage(fmessages, did, true, 0);
+                                if (id == forward_noquote) {
+                                    getMessageHelper().processForwardFromMyName(fmessages, did, true, 0);
+                                } else {
+                                    SendMessagesHelper.getInstance(currentAccount).sendMessage(fmessages, did, true, 0);
+                                }
                             }
                             fragment1.finishFragment();
                         } else {

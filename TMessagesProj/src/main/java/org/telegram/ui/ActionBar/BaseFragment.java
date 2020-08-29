@@ -43,6 +43,8 @@ import org.telegram.tgnet.ConnectionsManager;
 
 import java.util.ArrayList;
 
+import tw.nekomimi.nekogram.MessageHelper;
+
 public class BaseFragment {
 
     private boolean isFinished;
@@ -564,5 +566,9 @@ public class BaseFragment {
 
     public UserConfig getUserConfig() {
         return getAccountInstance().getUserConfig();
+    }
+
+    public MessageHelper getMessageHelper() {
+        return MessageHelper.getInstance(currentAccount);
     }
 }

@@ -226,6 +226,8 @@ import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
 
+import tw.nekomimi.nekogram.MessageHelper;
+
 @SuppressWarnings("unchecked")
 public class PhotoViewer implements NotificationCenter.NotificationCenterDelegate, GestureDetector2.OnGestureListener, GestureDetector2.OnDoubleTapListener {
 
@@ -3200,7 +3202,11 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
                                 if (message != null) {
                                     SendMessagesHelper.getInstance(currentAccount).sendMessage(message.toString(), did, null, null, true, null, null, null, true, 0);
                                 }
-                                SendMessagesHelper.getInstance(currentAccount).sendMessage(fmessages, did, true, 0);
+                                if (id == gallery_menu_send_noquote) {
+                                    MessageHelper.getInstance(currentAccount).processForwardFromMyName(fmessages, did, true, 0);
+                                } else {
+                                    SendMessagesHelper.getInstance(currentAccount).sendMessage(fmessages, did, true, 0);
+                                }
                             }
                             fragment1.finishFragment();
                         } else {
