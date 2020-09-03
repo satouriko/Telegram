@@ -265,6 +265,17 @@ public class Emoji {
 
         @Override
         public void draw(Canvas canvas) {
+            /*if (MessagesController.getInstance().useSystemEmoji) {
+                //textPaint.setTextSize(getBounds().width());
+                canvas.drawText(EmojiData.data[info.page][info.emojiIndex], getBounds().left, getBounds().bottom, textPaint);
+                return;
+            }*/
+            if (!isLoaded()) {
+                loadEmoji(info.page, info.page2);
+                canvas.drawRect(getBounds(), placeholderPaint);
+                return;
+            }
+
             Rect b;
             if (fullSize) {
                 b = getDrawRect();
@@ -301,6 +312,16 @@ public class Emoji {
         @Override
         public void setColorFilter(ColorFilter cf) {
 
+        }
+
+        public boolean isLoaded() {
+            return emojiBmp[info.page][info.page2] != null;
+        }
+
+        public void preload() {
+            if (!isLoaded()) {
+                loadEmoji(info.page, info.page2);
+            }
         }
     }
 

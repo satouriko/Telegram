@@ -773,8 +773,10 @@ std::shared_ptr<LOTAsset> LottieParserImpl::parseAsset() {
                     return sharedAsset;
                 }
                 std::shared_ptr<LOTData> layer = parseLayer();
-                staticFlag = staticFlag && layer->isStatic();
-                asset->mLayers.push_back(layer);
+                if (layer) {
+                    staticFlag = staticFlag && layer->isStatic();
+                    asset->mLayers.push_back(layer);
+                }
             }
             if (!IsValid()) {
                 parsingError = true;
@@ -1264,7 +1266,7 @@ std::shared_ptr<LOTData> LottieParserImpl::parseGroupObject() {
                 parsingError = true;
                 return sharedGroup;
             }
-            if (group->mChildren.back()->type() == LOTData::Type::Transform) {
+            if (!group->mChildren.empty() && group->mChildren.back()->type() == LOTData::Type::Transform) {
                 group->mTransform = std::static_pointer_cast<LOTTransformData>(
                         group->mChildren.back());
                 group->mChildren.pop_back();
