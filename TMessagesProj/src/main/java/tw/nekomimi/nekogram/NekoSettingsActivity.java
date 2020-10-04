@@ -587,6 +587,8 @@ public class NekoSettingsActivity extends BaseFragment implements UpdateHelper.U
                                 break;
                         }
                         textCell.setTextAndValue(LocaleController.getString("TranslationProvider", R.string.TranslationProvider), value, false);
+                    } else if (position == sourceCodeRow) {
+                        textCell.setText(LocaleController.getString("SourceCode", R.string.SourceCode), true);
                     }
                     break;
                 }
@@ -644,12 +646,6 @@ public class NekoSettingsActivity extends BaseFragment implements UpdateHelper.U
                         cell.setText(LocaleController.getString("SomeItemsNeedRestart", R.string.SomeItemsNeedRestart));
                     }
                     break;
-                }
-                case 8: {
-                    TextCell cell = (TextCell) holder.itemView;
-                    if (position == sourceCodeRow) {
-                        cell.setText(LocaleController.getString("SourceCode", R.string.SourceCode), true);
-                    }
                 }
             }
         }
@@ -709,7 +705,7 @@ public class NekoSettingsActivity extends BaseFragment implements UpdateHelper.U
         public int getItemViewType(int position) {
             if (position == connection2Row || position == chat2Row || position == help2Row) {
                 return 1;
-            } else if (position == mapPreviewRow || position == messageMenuRow || position == translationProviderRow) {
+            } else if (position == mapPreviewRow || position == messageMenuRow || position == translationProviderRow || position == sourceCodeRow) {
                 return 2;
             } else if (position == ipv6Row || position == useSystemEmojiRow || position == forceTabletRow ||
                     position == saveCacheToPrivateDirectoryRow || position == unlimitedFavedStickersRow ||
@@ -722,10 +718,8 @@ public class NekoSettingsActivity extends BaseFragment implements UpdateHelper.U
                 return 6;
             } else if (position == needRestartRow) {
                 return 7;
-            } else if (position == sourceCodeRow) {
-                return 8;
             }
-            return 8;
+            return 2;
         }
     }
 }
