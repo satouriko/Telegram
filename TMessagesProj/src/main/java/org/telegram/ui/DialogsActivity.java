@@ -156,6 +156,9 @@ import org.telegram.ui.Components.UndoView;
 
 import java.util.ArrayList;
 
+import tw.nekomimi.nekogram.ApplyThemeHelper;
+import tw.nekomimi.nekogram.NekoConfig;
+
 public class DialogsActivity extends BaseFragment implements NotificationCenter.NotificationCenterDelegate {
 
     private class ViewPage extends FrameLayout {
@@ -3238,6 +3241,21 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
             }
         }
         showNextSupportedSuggestion();
+        if (NekoConfig.themeVersion < NekoConfig.THEME_VERSION && UserConfig.getInstance(currentAccount).isClientActivated()) {
+            NekoConfig.setThemeVersion(NekoConfig.THEME_VERSION);
+            new ApplyThemeHelper("shojoyoru", true, parentLayout, (shojoyoru) -> {
+                new ApplyThemeHelper("ZPink", false, parentLayout, (zpink) -> {
+                    if (Build.VERSION.SDK_INT >= 29) {
+                        Theme.selectedAutoNightType = Theme.AUTO_NIGHT_TYPE_SYSTEM;
+                        Theme.checkAutoNightThemeConditions();
+                    }
+                    Theme.setCurrentNightTheme(Theme.getTheme(shojoyoru.getKey()));
+                    SharedPreferences.Editor editor = ApplicationLoader.applicationContext.getSharedPreferences("themeconfig", Activity.MODE_PRIVATE).edit();
+                    editor.putString("lastDarkTheme", Theme.getCurrentNightTheme().getKey());
+                    editor.commit();
+                });
+            });
+        }
     }
 
     @Override
