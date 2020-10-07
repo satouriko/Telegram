@@ -45,7 +45,6 @@
     <string name="ProviderGoogleTranslateCN">Google Translate CN</string>
     <string name="TranslateApiUnsupported">The translation provider you selected don\'t support your language</string>
     <string name="ProviderLingocloud">Lingocloud</string>
-    <string name="ProviderMicrosoft">Microsoft Translator</string>
     <string name="UndoTranslate">Undo translate</string>
     <string name="CopyDetails">Copy Details</string>
     <string name="BotToken">Token</string>

@@ -399,8 +399,6 @@ public class NekoSettingsActivity extends BaseFragment implements UpdateHelper.U
         types.add(Translator.PROVIDER_LINGO);
         arrayList.add(LocaleController.getString("ProviderYandex", R.string.ProviderYandex));
         types.add(Translator.PROVIDER_YANDEX);
-        arrayList.add(LocaleController.getString("ProviderMicrosoft", R.string.ProviderMicrosoft));
-        types.add(Translator.PROVIDER_MICROSOFT);
 
         AlertDialog.Builder builder = new AlertDialog.Builder(context);
         builder.setTitle(LocaleController.getString("TranslationProvider", R.string.TranslationProvider));
@@ -588,9 +586,6 @@ public class NekoSettingsActivity extends BaseFragment implements UpdateHelper.U
                                 break;
                             case Translator.PROVIDER_LINGO:
                                 value = LocaleController.getString("ProviderLingocloud", R.string.ProviderLingocloud);
-                                break;
-                            case Translator.PROVIDER_MICROSOFT:
-                                value = LocaleController.getString("ProviderMicrosoft", R.string.ProviderMicrosoft);
                                 break;
                         }
                         textCell.setTextAndValue(LocaleController.getString("TranslationProvider", R.string.TranslationProvider), value, false);
