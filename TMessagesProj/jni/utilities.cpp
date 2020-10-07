@@ -47,3 +47,15 @@ extern "C" JNIEXPORT jstring Java_tw_nekomimi_nekogram_translator_MicrosoftTrans
 
     return env->NewStringUTF(hex);
 }
+
+extern "C" JNIEXPORT jstring Java_org_telegram_messenger_Utilities_readlinkFd(JNIEnv *env, jclass clazz, int fd) {
+    std::string path = "/proc/self/fd/";
+    path += fd;
+    ssize_t result = readlink(path.c_str(), buf, PATH_MAX);
+    jstring value = 0;
+    if (result != -1) {
+        buf[result] = '\0';
+        value = env->NewStringUTF(buf);
+    }
+    return value;
+}

@@ -91,7 +91,7 @@ public class SharedConfig {
     public static boolean streamAllVideo = false;
     public static boolean streamMkv = false;
     public static boolean saveStreamMedia = true;
-    public static boolean smoothKeyboard = false;
+    public static boolean smoothKeyboard = true;
     public static boolean pauseMusicOnRecord = true;
     public static boolean sortContactsByName;
     public static boolean sortFilesByName;
@@ -260,7 +260,7 @@ public class SharedConfig {
             useSystemEmoji = preferences.getBoolean("useSystemEmoji", false);
             streamMedia = preferences.getBoolean("streamMedia", true);
             saveStreamMedia = preferences.getBoolean("saveStreamMedia", true);
-            smoothKeyboard = preferences.getBoolean("smoothKeyboard", false);
+            smoothKeyboard = preferences.getBoolean("smoothKeyboard2", true);
             pauseMusicOnRecord = preferences.getBoolean("pauseMusicOnRecord", true);
             streamAllVideo = preferences.getBoolean("streamAllVideo", BuildVars.DEBUG_VERSION);
             streamMkv = preferences.getBoolean("streamMkv", false);
@@ -727,7 +727,7 @@ public class SharedConfig {
         smoothKeyboard = !smoothKeyboard;
         SharedPreferences preferences = MessagesController.getGlobalMainSettings();
         SharedPreferences.Editor editor = preferences.edit();
-        editor.putBoolean("smoothKeyboard", smoothKeyboard);
+        editor.putBoolean("smoothKeyboard2", smoothKeyboard);
         editor.commit();
     }
 

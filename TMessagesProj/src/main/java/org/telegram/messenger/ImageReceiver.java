@@ -25,6 +25,7 @@ import android.view.View;
 
 import org.telegram.tgnet.TLRPC;
 import org.telegram.ui.Components.AnimatedFileDrawable;
+import org.telegram.ui.Components.LoadingStickerDrawable;
 import org.telegram.ui.Components.RLottieDrawable;
 import org.telegram.ui.Components.RecyclableDrawable;
 
@@ -774,6 +775,9 @@ public class ImageReceiver implements NotificationCenter.NotificationCenterDeleg
                 lottieDrawable.start();
             }
         }
+        if (NotificationCenter.getGlobalInstance().isAnimationInProgress()) {
+            didReceivedNotification(NotificationCenter.stopAllHeavyOperations, currentAccount, 512);
+        }
         return false;
     }
 
@@ -849,12 +853,16 @@ public class ImageReceiver implements NotificationCenter.NotificationCenterDeleg
                     bitmapH = bitmapDrawable.getIntrinsicHeight();
                 }
             } else {
+                Bitmap bitmap = bitmapDrawable.getBitmap();
+                if (bitmap != null && bitmap.isRecycled()) {
+                    return;
+                }
                 if (orientation % 360 == 90 || orientation % 360 == 270) {
-                    bitmapW = bitmapDrawable.getBitmap().getHeight();
-                    bitmapH = bitmapDrawable.getBitmap().getWidth();
+                    bitmapW = bitmap.getHeight();
+                    bitmapH = bitmap.getWidth();
                 } else {
-                    bitmapW = bitmapDrawable.getBitmap().getWidth();
-                    bitmapH = bitmapDrawable.getBitmap().getHeight();
+                    bitmapW = bitmap.getWidth();
+                    bitmapH = bitmap.getHeight();
                 }
             }
             float realImageW = imageW - sideClip * 2;
@@ -1442,7 +1450,7 @@ public class ImageReceiver implements NotificationCenter.NotificationCenterDeleg
         imageX = x;
     }
 
-    public void setImageY(int y) {
+    public void setImageY(float y) {
         imageY = y;
     }
 
@@ -1692,6 +1700,11 @@ public class ImageReceiver implements NotificationCenter.NotificationCenterDeleg
         if (animation != null) {
             animation.setUseSharedQueue(useSharedAnimationQueue);
             animation.start();
+        } else {
+            RLottieDrawable rLottieDrawable = getLottieAnimation();
+            if (rLottieDrawable != null && !rLottieDrawable.isRunning()) {
+                rLottieDrawable.restart();
+            }
         }
     }
 
@@ -1699,6 +1712,11 @@ public class ImageReceiver implements NotificationCenter.NotificationCenterDeleg
         AnimatedFileDrawable animation = getAnimation();
         if (animation != null) {
             animation.stop();
+        } else {
+            RLottieDrawable rLottieDrawable = getLottieAnimation();
+            if (rLottieDrawable != null && !rLottieDrawable.isRunning()) {
+                rLottieDrawable.stop();
+            }
         }
     }
 
@@ -1787,7 +1805,7 @@ public class ImageReceiver implements NotificationCenter.NotificationCenterDeleg
                 if (currentMediaDrawable instanceof AnimatedFileDrawable && ((AnimatedFileDrawable) currentMediaDrawable).hasBitmap()) {
                     allowCorssfade = false;
                 } else if (currentImageDrawable instanceof RLottieDrawable) {
-                    allowCorssfade = false;
+                    allowCorssfade = staticThumbDrawable instanceof LoadingStickerDrawable;
                 }
                 if (allowCorssfade && (currentThumbDrawable == null && staticThumbDrawable == null || currentAlpha == 1.0f || forceCrossfade)) {
                     currentAlpha = 0.0f;
