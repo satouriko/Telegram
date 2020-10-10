@@ -29,7 +29,8 @@
     <string name="TestBackendOff">このアカウントは、本番バックエンドに接続します。</string>
    <string name="ViewHistory">履歴を見る</string>
     <string name="Nya">にゃ!</string>
-    <string name="SaveCacheToPrivateDirectory">Cacheをprivate directoryに保存する*</string>
+    <string name="SaveCacheToExternalFilesDir">ストレージの分離*</string>
+    <string name="SaveCacheToExternalFilesDirAbout">共有ストレージを整理するために、「Telegram」フォルダをアプリ固有のディレクトリに保存します。</string>
     <string name="SensitiveDisableFiltering">Sensitiveな内容のfilteringを無効にする</string>
     <string name="SensitiveAbout">公開チャンネルに投稿されたセンシティブな内容をすべてあなたの端末に表示します。</string>
     <string name="Experiment">実験的</string>

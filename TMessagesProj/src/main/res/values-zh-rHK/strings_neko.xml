@@ -29,7 +29,8 @@
     <string name="TestBackendOff">此賬户將連接至生產後端服務器。</string>
     <string name="ViewHistory">顯示歷史消息</string>
     <string name="Nya">喵！</string>
-    <string name="SaveCacheToPrivateDirectory">緩存媒體文件到應用私有目錄下*</string>
+    <string name="SaveCacheToExternalFilesDir">存儲空間隔離*</string>
+    <string name="SaveCacheToExternalFilesDirAbout">保存 \"Telegram\" 文件夾到應用特定的目錄，以保持共享存儲空間整潔。</string>
     <string name="SensitiveDisableFiltering">禁用敏感內容過濾</string>
     <string name="SensitiveAbout">在您所有設備上顯示公共頻道中的敏感媒體內容。</string>
     <string name="Experiment">實驗性</string>

@@ -294,11 +294,11 @@ public class NekoSettingsActivity extends BaseFragment implements UpdateHelper.U
         translationProviderRow = rowCount++;
         chat2Row = rowCount++;
         experimentRow = rowCount++;
-        saveCacheToPrivateDirectoryRow = Build.VERSION.SDK_INT >= 24 ? rowCount++ : -1;
         smoothKeyboardRow = !AndroidUtilities.isTablet() ? rowCount++ : -1;
         mapDriftingFixRow = rowCount++;
         disableFilteringRow = rowCount++;
         unlimitedFavedStickersRow = rowCount++;
+        saveCacheToPrivateDirectoryRow = Build.VERSION.SDK_INT >= 24 ? rowCount++ : -1;
         forceTabletRow = rowCount++;
         needRestartRow = rowCount++;
         helpRow = rowCount++;
@@ -600,7 +600,7 @@ public class NekoSettingsActivity extends BaseFragment implements UpdateHelper.U
                     if (position == ipv6Row) {
                         textCell.setTextAndCheck(LocaleController.getString("IPv6", R.string.IPv6), NekoConfig.useIPv6, false);
                     } else if (position == saveCacheToPrivateDirectoryRow) {
-                        textCell.setTextAndCheck(LocaleController.getString("SaveCacheToPrivateDirectory", R.string.SaveCacheToPrivateDirectory), NekoConfig.saveCacheToPrivateDirectory, true);
+                        textCell.setTextAndValueAndCheck(LocaleController.getString("SaveCacheToExternalFilesDir", R.string.SaveCacheToExternalFilesDir), LocaleController.getString("SaveCacheToExternalFilesDirAbout", R.string.SaveCacheToExternalFilesDirAbout), NekoConfig.saveCacheToPrivateDirectory, true, true);
                     } else if (position == useSystemEmojiRow) {
                         textCell.setTextAndCheck(LocaleController.getString("EmojiUseDefault", R.string.EmojiUseDefault), SharedConfig.useSystemEmoji, true);
                     } else if (position == forceTabletRow) {
