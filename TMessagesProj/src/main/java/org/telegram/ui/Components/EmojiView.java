@@ -3214,7 +3214,7 @@ public class EmojiView extends FrameLayout implements NotificationCenter.Notific
                 setBackgroundResource(R.drawable.smiles_popup);
                 getBackground().setColorFilter(new PorterDuffColorFilter(Theme.getColor(Theme.key_chat_emojiPanelBackground), PorterDuff.Mode.MULTIPLY));
                 if (needEmojiSearch) {
-                    bottomTabContainerBackground.setBackgroundDrawable(null);
+                    bottomTabContainerBackground.setBackgroundColor(Theme.getColor(Theme.key_chat_emojiPanelBackground));
                 }
                 currentBackgroundType = 1;
             }
