@@ -1417,6 +1417,7 @@ public class LaunchActivity extends Activity implements ActionBarLayout.ActionBa
                         Integer threadId = null;
                         Integer commentId = null;
                         boolean hasUrl = false;
+                        boolean internal = intent.getExtras() != null && intent.getExtras().get("internal") != null && (boolean) intent.getExtras().get("internal");
                         final String scheme = data.getScheme();
                         if (scheme != null) {
                             switch (scheme) {
@@ -1889,7 +1890,7 @@ public class LaunchActivity extends Activity implements ActionBarLayout.ActionBa
                                 if (message != null && message.startsWith("@")) {
                                     message = " " + message;
                                 }
-                                runLinkRequest(intentAccount[0], username, group, sticker, botUser, botChat, message, hasUrl, messageId, channelId, threadId, commentId, game, auth, lang, unsupportedUrl, code, login, wallPaper, theme, 0);
+                                runLinkRequest(intentAccount[0], username, group, sticker, botUser, botChat, message, hasUrl, messageId, channelId, threadId, commentId, game, auth, lang, unsupportedUrl, code, login, wallPaper, theme, internal ? 3 : 0);
                             } else {
                                 try (Cursor cursor = getContentResolver().query(intent.getData(), null, null, null, null)) {
                                     if (cursor != null) {
