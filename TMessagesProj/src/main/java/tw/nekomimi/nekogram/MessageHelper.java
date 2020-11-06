@@ -153,7 +153,7 @@ public class MessageHelper extends BaseController {
         req.q = "";
         req.offset_id = offset_id;
         if (user != null) {
-            req.from_id = getMessagesController().getInputUser(user);
+            req.from_id = getMessagesController().getInputPeer(user.id);
             req.flags |= 1;
         }
         req.filter = new TLRPC.TL_inputMessagesFilterEmpty();
