@@ -24,10 +24,13 @@
     <string name="NekogramRunning">Nekogram ランニング</string>
     <string name="SomeItemsNeedRestart">注 * オプションを有効にするには、再起動が必要な場合があります。</string>
     <string name="DeleteDownloadedFile">キャッシュを削除</string>
-    <string name="TestBackend">異世界</string>
-    <string name="TestBackendOn">このアカウントは、テストバックエンドに接続します。</string>
-    <string name="TestBackendOff">このアカウントは、本番バックエンドに接続します。</string>
-   <string name="ViewHistory">履歴を見る</string>
+    <string name="CustomBackend">異世界</string>
+    <string name="CustomBackendNotice">この機能は、プロのユーザーのみが利用できます。次のオプションが何を表しているのかわからない場合は、無視してください。</string>
+    <string name="CustomBackendProduction">本番データセンター</string>
+    <string name="CustomBackendTestDC">テストデータセンター</string>
+    <string name="CustomBackendProductionDetail">何をしているかわからない限り、このデフォルト設定を維持します。</string>
+    <string name="CustomBackendTestDCDetail">このアカウントはテストデータセンターサーバーに接続します。 本番データセンターに提供されているMTProxyを使用すると、接続が失敗する場合があります。</string>
+    <string name="ViewHistory">履歴を見る</string>
     <string name="Nya">にゃ!</string>
     <string name="SaveCacheToExternalFilesDir">ストレージの分離*</string>
     <string name="SaveCacheToExternalFilesDirAbout">共有ストレージを整理するために、「Telegram」フォルダをアプリ固有のディレクトリに保存します。</string>
@@ -47,7 +50,6 @@
     <string name="UndoTranslate">翻訳を元に戻す</string>
     <string name="CopyDetails">詳細をコピー</string>
     <string name="BotToken">トークン</string>
-    <string name="LoginExperimentAbout">何をしているかわからない限り、このリストのデフォルト設定を変更しないでください！</string>
     <string name="RearVideoMessages">ビデオメッセージで背面カメラを使用する</string>
     <string name="SourceCode">オープンソースコード</string>
     <string name="About">概要</string>

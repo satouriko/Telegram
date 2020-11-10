@@ -26,9 +26,12 @@
     <string name="NekogramRunning">Nekogram is running</string>
     <string name="SomeItemsNeedRestart">Options with * may need restart to take effect.</string>
     <string name="DeleteDownloadedFile">Delete downloaded file</string>
-    <string name="TestBackend">Test Backend</string>
-    <string name="TestBackendOn">This account will connect to the test backend.</string>
-    <string name="TestBackendOff">This account will connect to the production backend.</string>
+    <string name="CustomBackend">Custom Backend</string>
+    <string name="CustomBackendNotice">This function is only provided for expert users, if you don\'t know what the following options represent, just ignore it.</string>
+    <string name="CustomBackendProduction">Production DataCenter</string>
+    <string name="CustomBackendTestDC">Test DataCenter</string>
+    <string name="CustomBackendProductionDetail">Please keep with this option unless you know what you\'re doing.</string>
+    <string name="CustomBackendTestDCDetail">This account will connect to the test data center. MTProxies for production data centers might fail to connect.</string>
     <string name="ViewHistory">View history</string>
     <string name="Nya">Meow!</string>
     <string name="SaveCacheToExternalFilesDir">Storage isolation*</string>
@@ -49,7 +52,6 @@
     <string name="UndoTranslate">Undo translate</string>
     <string name="CopyDetails">Copy Details</string>
     <string name="BotToken">Token</string>
-    <string name="LoginExperimentAbout">Do not change the default settings in this list, unless you know what you are doing!</string>
     <string name="RearVideoMessages">Use rear camera in video messages</string>
     <string name="SourceCode">Open-source code</string>
     <string name="About">About</string>

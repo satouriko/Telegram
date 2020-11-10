@@ -18,7 +18,6 @@ import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.Dialog;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageInfo;
@@ -66,11 +65,6 @@ import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
-
-import androidx.annotation.NonNull;
-import androidx.recyclerview.widget.LinearLayoutManager;
-import androidx.recyclerview.widget.RecyclerView;
-
 import org.telegram.PhoneFormat.PhoneFormat;
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.ContactsController;
@@ -96,23 +90,23 @@ import org.telegram.ui.ActionBar.ActionBarMenu;
 import org.telegram.ui.ActionBar.ActionBarMenuItem;
 import org.telegram.ui.ActionBar.AlertDialog;
 import org.telegram.ui.ActionBar.BaseFragment;
+import org.telegram.ui.ActionBar.BottomSheet;
 import org.telegram.ui.ActionBar.Theme;
 import org.telegram.ui.ActionBar.ThemeDescription;
 import org.telegram.ui.Cells.CheckBoxCell;
+import org.telegram.ui.Cells.HeaderCell;
+import org.telegram.ui.Cells.RadioButtonCell;
 import org.telegram.ui.Components.AlertsCreator;
 import org.telegram.ui.Components.AvatarDrawable;
 import org.telegram.ui.Components.BackupImageView;
 import org.telegram.ui.Components.CombinedDrawable;
 import org.telegram.ui.Components.ContextProgressView;
-import org.telegram.ui.Components.CubicBezierInterpolator;
 import org.telegram.ui.Components.EditTextBoldCursor;
 import org.telegram.ui.Components.VerticalPositionAutoAnimator;
 import org.telegram.ui.Components.HintEditText;
 import org.telegram.ui.Components.ImageUpdater;
 import org.telegram.ui.Components.LayoutHelper;
 import org.telegram.ui.Components.RadialProgressView;
-import org.telegram.ui.Components.RecyclerListView;
-import org.telegram.ui.Components.SideMenultItemAnimator;
 import org.telegram.ui.Components.SlideView;
 
 import java.io.BufferedReader;
@@ -156,11 +150,14 @@ public class LoginActivity extends BaseFragment {
     private RadialProgressView floatingProgressView;
     private int progressRequestId;
     private boolean[] doneButtonVisible = new boolean[] {true, false};
+    private RadioButtonCell[] backendCells = new RadioButtonCell[2];
 
     private static final int DONE_TYPE_FLOATING = 0;
     private static final int DONE_TYPE_ACTION = 1;
 
     private final static int done_button = 1;
+    private final static int bot_button = 2;
+    private final static int custom_backend = 3;
 
     private static class ProgressView extends View {
 
@@ -261,7 +258,7 @@ public class LoginActivity extends BaseFragment {
                     if (onBackPressed()) {
                         finishFragment();
                     }
-                } else if (id == 2) {
+                } else if (id == bot_button) {
                     AlertDialog.Builder builder = new AlertDialog.Builder(context);
                     builder.setTitle(LocaleController.getString("BotLogin", R.string.BotLogin));
 
@@ -354,6 +351,46 @@ public class LoginActivity extends BaseFragment {
                             editText.setLayoutParams(layoutParams);
                         }
                     }
+                } else if (id == custom_backend) {
+                    BottomSheet.Builder builder = new BottomSheet.Builder(context, true);
+                    builder.setApplyTopPadding(false);
+
+                    LinearLayout settingsContainer = new LinearLayout(context);
+                    settingsContainer.setPadding(0, 0, 0, AndroidUtilities.dp(4));
+                    settingsContainer.setOrientation(LinearLayout.VERTICAL);
+
+                    HeaderCell headerCell = new HeaderCell(context);
+                    headerCell.setText(LocaleController.getString("CustomBackend", R.string.CustomBackend));
+                    headerCell.setText2(LocaleController.getString("CustomBackendNotice", R.string.CustomBackendNotice));
+                    settingsContainer.addView(headerCell, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.LEFT | Gravity.TOP, 3, 4, 3, 2));
+
+                    for (int a = 0; a < 2; a++) {
+                        backendCells[a] = new RadioButtonCell(context, true);
+                        boolean isTestBackend = ConnectionsManager.native_isTestBackend(currentAccount) != 0;
+                        switch (a) {
+                            case 0:
+                                backendCells[a].setTextAndValue(LocaleController.getString("CustomBackendProduction", R.string.CustomBackendProduction), LocaleController.getString("CustomBackendProductionDetail", R.string.CustomBackendProductionDetail), true, !isTestBackend);
+                                break;
+                            case 1:
+                                backendCells[a].setTextAndValue(LocaleController.getString("CustomBackendTestDC", R.string.CustomBackendTestDC), LocaleController.getString("CustomBackendTestDCDetail", R.string.CustomBackendTestDCDetail), false, isTestBackend);
+                                break;
+                        }
+                        backendCells[a].setTag(a);
+                        backendCells[a].setOnClickListener(v -> {
+                            int num = (Integer) v.getTag();
+                            boolean isTestBackend2 = ConnectionsManager.native_isTestBackend(currentAccount) != 0;
+                            if (isTestBackend2 ^ num == 1) {
+                                ConnectionsManager.native_switchBackend(currentAccount);
+                            }
+                            for (int a1 = 0; a1 < 2; a1++) {
+                                backendCells[a1].setChecked(a1 == num, true);
+                            }
+                        });
+                        settingsContainer.addView(backendCells[a], LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 50));
+                    }
+
+                    builder.setCustomView(settingsContainer);
+                    showDialog(builder.create());
                 }
             }
         });
@@ -363,7 +400,15 @@ public class LoginActivity extends BaseFragment {
         doneButtonVisible[DONE_TYPE_ACTION] = false;
 
         ActionBarMenu menu = actionBar.createMenu();
-        menu.addItem(2, R.drawable.list_bot);
+        ActionBarMenuItem headerItem = menu.addItem(0, R.drawable.ic_ab_other);
+        headerItem.setContentDescription(LocaleController.getString("AccDescrMoreOptions", R.string.AccDescrMoreOptions));
+        headerItem.addSubItem(bot_button, R.drawable.menu_bots, LocaleController.getString("BotLogin", R.string.BotLogin));
+        headerItem.addSubItem(custom_backend, R.drawable.menu_switch, LocaleController.getString("CustomBackend", R.string.CustomBackend));
+        boolean isTestBackend = ConnectionsManager.native_isTestBackend(currentAccount) != 0;
+        if (isTestBackend) {
+            ConnectionsManager.native_switchBackend(currentAccount);
+        }
+
         actionBar.setAllowOverlayTitle(true);
         doneItem = menu.addItemWithWidth(done_button, R.drawable.ic_done, AndroidUtilities.dp(56));
         doneProgressView = new ContextProgressView(context, 1);
@@ -1172,115 +1217,6 @@ public class LoginActivity extends BaseFragment {
 
     public class PhoneView extends SlideView implements AdapterView.OnItemSelectedListener {
 
-        private class ExperimentalAdapter extends RecyclerListView.SelectionAdapter {
-            private Context mContext;
-            private RecyclerView.ItemAnimator itemAnimator;
-            public boolean isExpanded = false;
-
-            ExperimentalAdapter(Context context, RecyclerView.ItemAnimator animator) {
-                mContext = context;
-                itemAnimator = animator;
-            }
-
-            public void setIsExpanded(boolean value, boolean animated) {
-                if (isExpanded == value || itemAnimator.isRunning()) {
-                    return;
-                }
-                isExpanded = value;
-                if (animated) {
-                    if (isExpanded) {
-                        notifyItemRangeInserted(0, 2);
-                    } else {
-                        notifyItemRangeRemoved(0, 2);
-                    }
-                } else {
-                    notifyDataSetChanged();
-                }
-            }
-
-            @Override
-            public boolean isEnabled(RecyclerView.ViewHolder holder) {
-                int position = holder.getAdapterPosition();
-                return position == 0;
-            }
-
-            @NonNull
-            @Override
-            public RecyclerView.ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
-                View view = null;
-                switch (viewType) {
-                    case 1:
-                        view = new CheckBoxCell(mContext, 2);
-                        break;
-                    case 2:
-                    default:
-                        view = new TextView(mContext);
-                }
-                view.setLayoutParams(new RecyclerView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-                return new RecyclerListView.Holder(view);
-            }
-
-            @Override
-            public void onBindViewHolder(RecyclerView.ViewHolder holder, int position) {
-                switch (holder.getItemViewType()) {
-                    case 1: {
-                        CheckBoxCell testBackendCell = (CheckBoxCell) holder.itemView;
-                        if (ConnectionsManager.native_isTestBackend(currentAccount) != 0) {
-                            ConnectionsManager.native_switchBackend(currentAccount);
-                        }
-                        testBackendCell.setText(LocaleController.getString("TestBackend", R.string.TestBackend), "", ConnectionsManager.native_isTestBackend(currentAccount) != 0, false);
-                        testBackendCell.setOnClickListener(new OnClickListener() {
-
-                            private Toast visibleToast;
-
-                            @Override
-                            public void onClick(View v) {
-                                if (getParentActivity() == null) {
-                                    return;
-                                }
-                                CheckBoxCell cell = (CheckBoxCell) v;
-                                ConnectionsManager.native_switchBackend(currentAccount);
-                                boolean isTestBackend = ConnectionsManager.native_isTestBackend(currentAccount) != 0;
-                                cell.setChecked(isTestBackend, true);
-                                try {
-                                    if (visibleToast != null) {
-                                        visibleToast.cancel();
-                                    }
-                                } catch (Exception e) {
-                                    FileLog.e(e);
-                                }
-                                if (isTestBackend) {
-                                    visibleToast = Toast.makeText(getParentActivity(), LocaleController.getString("TestBackendOn", R.string.TestBackendOn), Toast.LENGTH_SHORT);
-                                    visibleToast.show();
-                                } else {
-                                    visibleToast = Toast.makeText(getParentActivity(), LocaleController.getString("TestBackendOff", R.string.TestBackendOff), Toast.LENGTH_SHORT);
-                                    visibleToast.show();
-                                }
-                            }
-                        });
-                        break;
-                    }
-                    case 2: {
-                        TextView textView = (TextView) holder.itemView;
-                        textView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteRedText));
-                        textView.setText(LocaleController.getString("LoginExperimentAbout", R.string.LoginExperimentAbout));
-                        break;
-                    }
-                }
-            }
-
-            @Override
-            public int getItemCount() {
-                return isExpanded ? 2 : 0;
-            }
-
-            @Override
-            public int getItemViewType(int position) {
-                if (position == 0) return 1;
-                return 2;
-            }
-        }
-
         private EditTextBoldCursor codeField;
         private HintEditText phoneField;
         private TextView countryButton;
@@ -1288,9 +1224,6 @@ public class LoginActivity extends BaseFragment {
         private TextView textView;
         private TextView textView2;
         private CheckBoxCell checkBoxCell;
-        private ImageView arrowView;
-        private TextView experimentalTextView;
-        private RecyclerListView experimental;
 
         private int countryState = 0;
 
@@ -1601,51 +1534,6 @@ public class LoginActivity extends BaseFragment {
                     }
                 });
             }
-
-            LinearLayout linearLayout2 = new LinearLayout(context);
-            linearLayout2.setGravity(Gravity.CENTER_VERTICAL);
-            linearLayout.setOrientation(HORIZONTAL);
-            addView(linearLayout2, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 0));
-
-            arrowView = new ImageView(context);
-            arrowView.setScaleType(ImageView.ScaleType.CENTER);
-            arrowView.setImageResource(R.drawable.collapse_down);
-            arrowView.setColorFilter(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText6));
-            arrowView.setRotation(-90.0f);
-            linearLayout2.addView(arrowView, LayoutHelper.createFrame(20, 20, Gravity.CENTER, -5, 0, 0, 0));
-
-            experimentalTextView = new TextView(context);
-            experimentalTextView.setText(LocaleController.getString("Experiment", R.string.Experiment));
-            experimentalTextView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText6));
-            experimentalTextView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 16);
-            experimentalTextView.setGravity(LocaleController.isRTL ? Gravity.RIGHT : Gravity.LEFT);
-            experimentalTextView.setLineSpacing(AndroidUtilities.dp(4), 1.0f);
-            experimentalTextView.setPadding(20, 20, 20, 20);
-            linearLayout2.addView(experimentalTextView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.LEFT | Gravity.TOP, 0, 0, 0, 0));
-
-            LinearLayoutManager linearLayoutManager = new LinearLayoutManager(context, LinearLayoutManager.VERTICAL, false) {
-                @Override
-                public boolean canScrollVertically() {
-                    return false;
-                }
-            };
-            experimental = new RecyclerListView(context);
-            experimental.setItemAnimator(new SideMenultItemAnimator(experimental));
-            experimental.setBackgroundColor(Theme.getColor(Theme.key_chats_menuBackground));
-            experimental.setLayoutManager(linearLayoutManager);
-            experimental.setAllowItemsInteractionDuringAnimation(false);
-            ExperimentalAdapter experimentalAdapter = new ExperimentalAdapter(context, experimental.getItemAnimator());
-            experimental.setAdapter(experimentalAdapter);
-            addView(experimental, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.LEFT | Gravity.TOP, 0, 0, 0, 0));
-
-            linearLayout2.setOnClickListener(new OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    float rotation = !experimentalAdapter.isExpanded ? 0.0f : -90.0f;
-                    arrowView.animate().rotation(rotation).setDuration(220).setInterpolator(CubicBezierInterpolator.EASE_OUT).start();
-                    experimentalAdapter.setIsExpanded(!experimentalAdapter.isExpanded, true);
-                }
-            });
 
             HashMap<String, String> languageMap = new HashMap<>();
             try {

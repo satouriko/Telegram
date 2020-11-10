@@ -23,9 +23,12 @@
     <string name="NekogramRunning">貓貓奔跑中</string>
     <string name="SomeItemsNeedRestart">標示 * 的選項需要重新啟動才可生效。</string>
     <string name="DeleteDownloadedFile">刪除快取的檔案</string>
-    <string name="TestBackend">異世界</string>
-    <string name="TestBackendOn">此賬戶將連線至測試後端伺服器。</string>
-    <string name="TestBackendOff">此賬戶將連線至生產後端伺服器。</string>
+    <string name="CustomBackend">異世界</string>
+    <string name="CustomBackendNotice">此功能僅提供給專業使用者，如果您不知道以下選項代表什麼，請忽略它。</string>
+    <string name="CustomBackendProduction">生產資料中心</string>
+    <string name="CustomBackendTestDC">測試資料中心</string>
+    <string name="CustomBackendProductionDetail">保持此預設設定，除非你知道自己在做什麼。</string>
+    <string name="CustomBackendTestDCDetail">此賬戶將連線至測試資料中心伺服器。使用為生產資料中心提供的 MTProxy 可能導致連線失敗。</string>
     <string name="ViewHistory">顯示歷史訊息</string>
     <string name="Nya">喵！</string>
     <string name="SaveCacheToExternalFilesDir">儲存空間隔離*</string>
@@ -46,7 +49,6 @@
     <string name="UndoTranslate">撤銷翻譯</string>
     <string name="CopyDetails">複製詳細資訊</string>
     <string name="BotToken">令牌</string>
-    <string name="LoginExperimentAbout">不要修改此列表中的預設設定，除非你知道自己在做什麼！</string>
     <string name="RearVideoMessages">視頻消息中使用後置攝像頭</string>
     <string name="SourceCode">開放原始碼</string>
     <string name="About">關於</string>
