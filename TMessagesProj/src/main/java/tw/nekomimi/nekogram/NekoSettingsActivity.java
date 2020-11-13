@@ -10,6 +10,7 @@ import android.content.SharedPreferences;
 import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.os.Build;
+import android.os.Bundle;
 import android.text.TextPaint;
 import android.view.Gravity;
 import android.view.View;
@@ -98,6 +99,14 @@ public class NekoSettingsActivity extends BaseFragment implements UpdateHelper.U
     private int sourceCodeRow;
     private int checkUpdateRow;
     private int help2Row;
+
+    public NekoSettingsActivity() {
+        super();
+    }
+
+    public NekoSettingsActivity(Bundle args) {
+        super(args);
+    }
 
     @Override
     public boolean onFragmentCreate() {
@@ -259,7 +268,7 @@ public class NekoSettingsActivity extends BaseFragment implements UpdateHelper.U
                     ((TextCheckCell) view).setChecked(NekoConfig.rearVideoMessages);
                 }
             } else if (position == sourceCodeRow) {
-                Browser.openUrl(getParentActivity(), "https://github.com/rikakomoe/Nekogram-Lite");
+                Browser.openUrl(getParentActivity(), "https://github.com/satouriko/nekolite");
             } else if (position == checkUpdateRow) {
                 UpdateHelper.getInstance().checkNewVersionAvailable(this, false);
                 checkingUpdate = true;
@@ -267,6 +276,11 @@ public class NekoSettingsActivity extends BaseFragment implements UpdateHelper.U
             }
 
         });
+        if (arguments != null && arguments.containsKey("update")) {
+            listView.post(() -> {
+                listView.scrollToPosition(checkUpdateRow);
+            });
+        }
 
         return fragmentView;
     }

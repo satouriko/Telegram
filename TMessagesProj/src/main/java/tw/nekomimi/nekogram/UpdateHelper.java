@@ -31,6 +31,7 @@ import org.telegram.tgnet.TLRPC;
 import org.telegram.ui.LaunchActivity;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.Random;
@@ -128,17 +129,57 @@ public class UpdateHelper {
 
     static class UpdateRef {
         int versionCode;
+        String abi;
         String filename;
         String realFilename;
         TLRPC.Document document;
         TLRPC.Message message;
 
-        UpdateRef(int versionCode, String filename, TLRPC.Document document, TLRPC.Message message) {
+        UpdateRef(int versionCode, String abi, String filename, TLRPC.Document document, TLRPC.Message message) {
             this.versionCode = versionCode;
+            this.abi = abi;
             this.filename = filename;
             this.document = document;
             this.message = message;
             this.realFilename = FileLoader.getAttachFileName(document);
+        }
+    }
+
+    /**
+     * Returns a natural number if some abi is supported by device
+     * o/w negative
+     * @param abi abi, afat for universal
+     * @return int
+     */
+    private int isSupportedAbi(String abi) {
+        ArrayList<String> supportedABIs;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            supportedABIs = new ArrayList<>(Arrays.asList(Build.SUPPORTED_ABIS));
+        } else {
+            supportedABIs = new ArrayList<>(Arrays.asList(Build.CPU_ABI, Build.CPU_ABI2));
+        }
+        if (abi.equals("afat"))
+            return supportedABIs.size() + 1;
+        else
+            return supportedABIs.indexOf(abi);
+    }
+
+    /**
+     * Returns a positive number if a is favored than b
+     * o/w negative
+     * @param a abi, afat for universal
+     * @param b abi, afat for universal
+     * @return int
+     */
+    private int compareAbiFavor(String a, String b) {
+        int indexA = isSupportedAbi(a);
+        int indexB = isSupportedAbi(b);
+        if (indexB < 0) {
+            return 1;
+        } else if (indexA < 0) {
+            return -1;
+        } else {
+            return indexB - indexA;
         }
     }
 
@@ -157,7 +198,7 @@ public class UpdateHelper {
                     continue;
                 }
                 TLRPC.TL_documentAttributeFilename filename = (TLRPC.TL_documentAttributeFilename)attribute;
-                Pattern r = Pattern.compile("^Nekogram-Lite-[^-]+-(\\d+)-afat-release\\.apk$");
+                Pattern r = Pattern.compile("^Nekogram-Lite-[^-]+-(\\d+)-(.+)-release\\.apk$");
                 Matcher m = r.matcher(filename.file_name);
                 if (m.find()) {
                     int ver;
@@ -166,8 +207,18 @@ public class UpdateHelper {
                     } catch (NumberFormatException e) {
                         continue;
                     }
-                    this.updateRef = new UpdateRef(ver, filename.file_name, document, message);
-                    return;
+                    String abi = m.group(2);
+                    if (isSupportedAbi(abi) < 0) {
+                        continue;
+                    }
+                    if (this.updateRef == null ||
+                            ver > this.updateRef.versionCode ||
+                            (ver == this.updateRef.versionCode && compareAbiFavor(abi, this.updateRef.abi) >= 0)
+                    ) {
+                        this.updateRef = new UpdateRef(ver, abi, filename.file_name, document, message);
+                    } else if (this.updateRef.versionCode > ver) {
+                        return;
+                    }
                 }
             }
         }

@@ -1798,6 +1798,8 @@ public class LaunchActivity extends Activity implements ActionBarLayout.ActionBa
                                         } else {
                                             open_settings = 1;
                                         }
+                                    } else if (url.startsWith("tg:upgrade") || url.startsWith("tg://upgrade") || url.startsWith("tg:update") || url.startsWith("tg://update")) {
+                                        open_settings = 7;
                                     } else if (url.startsWith("tg:meow") || url.startsWith("tg://meow") || url.startsWith("tg:nya") || url.startsWith("tg://nya") || url.startsWith("tg:miao") || url.startsWith("tg://miao")) {
                                         try {
                                             Toast.makeText(LaunchActivity.this, LocaleController.getString("Nya", R.string.Nya), Toast.LENGTH_SHORT).show();
@@ -2107,6 +2109,10 @@ public class LaunchActivity extends Activity implements ActionBarLayout.ActionBa
                     closePrevious = true;
                 } else if (open_settings == 6) {
                     fragment = new NekoSettingsActivity();
+                } else if (open_settings == 7) {
+                    Bundle args = new Bundle();
+                    args.putBoolean("update", true);
+                    fragment = new NekoSettingsActivity(args);
                 } else {
                     fragment = null;
                 }
