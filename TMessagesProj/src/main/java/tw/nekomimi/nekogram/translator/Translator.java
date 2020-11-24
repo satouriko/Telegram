@@ -19,7 +19,7 @@ abstract public class Translator {
     public static final int PROVIDER_GOOGLE_CN = 2;
     public static final int PROVIDER_LINGO = 3;
     public static final int PROVIDER_YANDEX = 4;
-
+    public static final int PROVIDER_DEEPL = 5;
 
     public static void translate(Object query, TranslateCallBack translateCallBack) {
         Locale locale = LocaleController.getInstance().currentLocale;
@@ -33,6 +33,10 @@ abstract public class Translator {
             case PROVIDER_LINGO:
                 toLang = locale.getLanguage();
                 translator = LingoTranslator.getInstance();
+                break;
+            case PROVIDER_DEEPL:
+                toLang = locale.getLanguage().toUpperCase();
+                translator = DeepLTranslator.getInstance();
                 break;
             case PROVIDER_GOOGLE:
             case PROVIDER_GOOGLE_CN:
