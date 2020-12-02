@@ -20,6 +20,7 @@ import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
+import androidx.core.util.Pair;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -403,18 +404,9 @@ public class NekoSettingsActivity extends BaseFragment implements UpdateHelper.U
     }
 
     static public AlertDialog getTranslationProviderAlert(Context context) {
-        ArrayList<String> arrayList = new ArrayList<>();
-        ArrayList<Integer> types = new ArrayList<>();
-        arrayList.add(LocaleController.getString("ProviderGoogleTranslate", R.string.ProviderGoogleTranslate));
-        types.add(Translator.PROVIDER_GOOGLE);
-        arrayList.add(LocaleController.getString("ProviderGoogleTranslateCN", R.string.ProviderGoogleTranslateCN));
-        types.add(Translator.PROVIDER_GOOGLE_CN);
-        arrayList.add(LocaleController.getString("ProviderLingocloud", R.string.ProviderLingocloud));
-        types.add(Translator.PROVIDER_LINGO);
-        arrayList.add(LocaleController.getString("ProviderYandex", R.string.ProviderYandex));
-        types.add(Translator.PROVIDER_YANDEX);
-        arrayList.add(LocaleController.getString("ProviderDeepLTranslate", R.string.ProviderDeepLTranslate));
-        types.add(Translator.PROVIDER_DEEPL);
+        Pair<ArrayList<String>, ArrayList<Integer>> providers = Translator.getProviders();
+        ArrayList<String> names = providers.first;
+        ArrayList<Integer> types = providers.second;
 
         AlertDialog.Builder builder = new AlertDialog.Builder(context);
         builder.setTitle(LocaleController.getString("TranslationProvider", R.string.TranslationProvider));
@@ -422,12 +414,12 @@ public class NekoSettingsActivity extends BaseFragment implements UpdateHelper.U
         linearLayout.setOrientation(LinearLayout.VERTICAL);
         builder.setView(linearLayout);
 
-        for (int a = 0; a < arrayList.size(); a++) {
+        for (int a = 0; a < names.size(); a++) {
             RadioColorCell cell = new RadioColorCell(context);
             cell.setPadding(AndroidUtilities.dp(4), 0, AndroidUtilities.dp(4), 0);
             cell.setTag(a);
             cell.setCheckColor(Theme.getColor(Theme.key_radioBackground), Theme.getColor(Theme.key_dialogRadioBackgroundChecked));
-            cell.setTextAndValue(arrayList.get(a), NekoConfig.translationProvider == types.get(a));
+            cell.setTextAndValue(names.get(a), NekoConfig.translationProvider == types.get(a));
             linearLayout.addView(cell);
             cell.setOnClickListener(v -> {
                 Integer which = (Integer) v.getTag();
@@ -588,25 +580,17 @@ public class NekoSettingsActivity extends BaseFragment implements UpdateHelper.U
                     } else if (position == messageMenuRow) {
                         textCell.setText(LocaleController.getString("MessageMenu", R.string.MessageMenu), true);
                     } else if (position == translationProviderRow) {
-                        String value;
-                        switch (NekoConfig.translationProvider) {
-                            case Translator.PROVIDER_GOOGLE:
-                            default:
-                                value = LocaleController.getString("ProviderGoogleTranslate", R.string.ProviderGoogleTranslate);
-                                break;
-                            case Translator.PROVIDER_GOOGLE_CN:
-                                value = LocaleController.getString("ProviderGoogleTranslateCN", R.string.ProviderGoogleTranslateCN);
-                                break;
-                            case Translator.PROVIDER_YANDEX:
-                                value = LocaleController.getString("ProviderYandex", R.string.ProviderYandex);
-                                break;
-                            case Translator.PROVIDER_LINGO:
-                                value = LocaleController.getString("ProviderLingocloud", R.string.ProviderLingocloud);
-                                break;
-                            case Translator.PROVIDER_DEEPL:
-                                value = LocaleController.getString("ProviderDeepLTranslate", R.string.ProviderDeepLTranslate);
-                                break;
+                        Pair<ArrayList<String>, ArrayList<Integer>> providers = Translator.getProviders();
+                        ArrayList<String> names = providers.first;
+                        ArrayList<Integer> types = providers.second;
+                        if (names == null || types == null) {
+                            return;
                         }
+                        int index = types.indexOf(NekoConfig.translationProvider);
+                        if (index < 0) {
+                            return;
+                        }
+                        String value = names.get(index);
                         textCell.setTextAndValue(LocaleController.getString("TranslationProvider", R.string.TranslationProvider), value, false);
                     } else if (position == sourceCodeRow) {
                         textCell.setText(LocaleController.getString("SourceCode", R.string.SourceCode), true);

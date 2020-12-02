@@ -2,13 +2,16 @@ package tw.nekomimi.nekogram.translator;
 
 import android.annotation.SuppressLint;
 import android.os.AsyncTask;
+import androidx.core.util.Pair;
 
 import org.json.JSONException;
 import org.telegram.messenger.FileLog;
 import org.telegram.messenger.LocaleController;
+import org.telegram.messenger.R;
 import org.telegram.tgnet.TLRPC;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
@@ -20,50 +23,109 @@ abstract public class Translator {
     public static final int PROVIDER_LINGO = 3;
     public static final int PROVIDER_YANDEX = 4;
     public static final int PROVIDER_DEEPL = 5;
+    public static final int PROVIDER_YOUDAO = 6;
+    public static final int PROVIDER_MICROSOFT = 7;
+
+    public static Pair<ArrayList<String>, ArrayList<Integer>> getProviders() {
+        ArrayList<String> names = new ArrayList<>();
+        ArrayList<Integer> types = new ArrayList<>();
+        names.add(LocaleController.getString("ProviderGoogleTranslate", R.string.ProviderGoogleTranslate));
+        types.add(Translator.PROVIDER_GOOGLE);
+        names.add(LocaleController.getString("ProviderGoogleTranslateCN", R.string.ProviderGoogleTranslateCN));
+        types.add(Translator.PROVIDER_GOOGLE_CN);
+        names.add(LocaleController.getString("ProviderLingocloud", R.string.ProviderLingocloud));
+        types.add(Translator.PROVIDER_LINGO);
+        names.add(LocaleController.getString("ProviderYandex", R.string.ProviderYandex));
+        types.add(Translator.PROVIDER_YANDEX);
+        names.add(LocaleController.getString("ProviderDeepLTranslate", R.string.ProviderDeepLTranslate));
+        types.add(Translator.PROVIDER_DEEPL);
+        names.add(LocaleController.getString("ProviderYouDao", R.string.ProviderYouDao));
+        types.add(Translator.PROVIDER_YOUDAO);
+        names.add(LocaleController.getString("ProviderMicrosoftTranslator", R.string.ProviderMicrosoftTranslator));
+        types.add(Translator.PROVIDER_MICROSOFT);
+        return new Pair<>(names, types);
+    }
 
     public static void translate(Object query, TranslateCallBack translateCallBack) {
-        Locale locale = LocaleController.getInstance().currentLocale;
-        String toLang;
         Translator translator;
-        switch (NekoConfig.translationProvider) {
+        int provider = NekoConfig.translationProvider;
+        switch (provider) {
             case PROVIDER_YANDEX:
                 translator = YandexTranslator.getInstance();
-                toLang = locale.getLanguage();
                 break;
             case PROVIDER_LINGO:
-                toLang = locale.getLanguage();
                 translator = LingoTranslator.getInstance();
                 break;
             case PROVIDER_DEEPL:
-                toLang = locale.getLanguage().toUpperCase();
                 translator = DeepLTranslator.getInstance();
+                break;
+            case PROVIDER_YOUDAO:
+                translator = YouDaoTranslator.getInstance();
+                break;
+            case PROVIDER_MICROSOFT:
+                translator = MicrosoftTranslator.getInstance();
                 break;
             case PROVIDER_GOOGLE:
             case PROVIDER_GOOGLE_CN:
             default:
-                if (locale.getLanguage().equals("zh")) {
-                    if (locale.getCountry().toUpperCase().equals("CN") || locale.getCountry().toUpperCase().equals("DUANG")) {
-                        toLang = "zh-CN";
-                    } else if (locale.getCountry().toUpperCase().equals("TW") || locale.getCountry().toUpperCase().equals("HK")) {
-                        toLang = "zh-TW";
-                    } else {
-                        toLang = locale.getLanguage();
-                    }
-                } else {
-                    toLang = locale.getLanguage();
-                }
                 translator = GoogleAppTranslator.getInstance();
                 break;
         }
-        if (!translator.getTargetLanguages().contains(toLang)) {
+
+        List<String> targetLanguages = translator.getTargetLanguages();
+        Locale locale = LocaleController.getInstance().currentLocale;
+        String toLang = convertLanguageCode(provider, locale.getLanguage(), locale.getCountry());
+        if (!targetLanguages.contains(toLang)) {
+            toLang = convertLanguageCode(provider, LocaleController.getString("LanguageCode", R.string.LanguageCode), null);
+        }
+        if (!targetLanguages.contains(toLang)) {
             translateCallBack.onUnsupported();
         } else {
             translator.startTask(query, toLang, translateCallBack);
         }
     }
 
-    private void startTask(Object query, String toLang, TranslateCallBack translateCallBack) {
-        new MyAsyncTask().request(query, toLang, translateCallBack).execute();
+
+    private void startTask(Object query, String toLang, TranslateCallBack translateCallBack){
+            new MyAsyncTask().request(query, toLang, translateCallBack).execute();
+    }
+
+    private static String convertLanguageCode(int provider, String language, String country) {
+        String toLang;
+        switch (provider) {
+            case PROVIDER_YANDEX:
+            case PROVIDER_LINGO:
+                toLang = language;
+                break;
+            case PROVIDER_DEEPL:
+                toLang = language.toUpperCase();
+                break;
+            case PROVIDER_YOUDAO:
+                if (language.equals("zh")) {
+                    toLang = "zh-CHS";
+                } else {
+                    toLang = language;
+                }
+                break;
+            case PROVIDER_MICROSOFT:
+            case PROVIDER_GOOGLE:
+            case PROVIDER_GOOGLE_CN:
+            default:
+                if (country != null && language.equals("zh")) {
+                    String countryUpperCase = country.toUpperCase();
+                    if (countryUpperCase.equals("CN") || countryUpperCase.equals("DUANG")) {
+                        toLang = provider == PROVIDER_MICROSOFT ? "zh-Hans" : "zh-CN";
+                    } else if (countryUpperCase.equals("TW") || countryUpperCase.equals("HK")) {
+                        toLang = provider == PROVIDER_MICROSOFT ? "zh-HanT" : "zh-TW";
+                    } else {
+                        toLang = language;
+                    }
+                } else {
+                    toLang = language;
+                }
+                break;
+        }
+        return toLang;
     }
 
     abstract protected String translate(String query, String tl) throws IOException, JSONException;

@@ -48,6 +48,8 @@
     <string name="TranslateApiUnsupported">選択した翻訳ソースはあなたの言語をサポートしていません</string>
     <string name="ProviderLingocloud">彩雲小訳</string>
     <string name="ProviderDeepLTranslate">DeepL 翻訳</string>
+    <string name="ProviderMicrosoftTranslator">Microsoft 翻訳</string>
+    <string name="ProviderYouDao">YouDao 翻訳</string>
     <string name="UndoTranslate">翻訳を元に戻す</string>
     <string name="CopyDetails">詳細をコピー</string>
     <string name="BotToken">トークン</string>

@@ -48,6 +48,8 @@
     <string name="TranslateApiUnsupported">您選擇的翻譯源不支持您的語言</string>
     <string name="ProviderLingocloud">彩雲小譯</string>
     <string name="ProviderDeepLTranslate">DeepL 翻譯</string>
+    <string name="ProviderMicrosoftTranslator">Microsoft 翻譯</string>
+    <string name="ProviderYouDao">有道翻譯</string>
     <string name="UndoTranslate">撤銷翻譯</string>
     <string name="CopyDetails">複製詳細信息</string>
     <string name="BotToken">令牌</string>
