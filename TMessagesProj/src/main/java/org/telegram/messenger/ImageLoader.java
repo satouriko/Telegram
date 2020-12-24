@@ -39,7 +39,6 @@ import org.telegram.ui.Components.AnimatedFileDrawable;
 import org.telegram.ui.Components.Point;
 import org.telegram.ui.Components.RLottieDrawable;
 import org.telegram.ui.Components.SlotsDrawable;
-import org.telegram.ui.Components.SvgHelper;
 import org.telegram.ui.Components.ThemePreviewDrawable;
 
 import java.io.ByteArrayOutputStream;
@@ -856,7 +855,19 @@ public class ImageLoader {
                     int size = document != null ? cacheImage.size : cacheImage.imageLocation.currentSize;
                     fileDrawable = new AnimatedFileDrawable(cacheImage.finalFilePath, false, size, document, document == null ? cacheImage.imageLocation : null, cacheImage.parentObject, seekTo, cacheImage.currentAccount, false);
                 } else {
-                    fileDrawable = new AnimatedFileDrawable(cacheImage.finalFilePath, "d".equals(cacheImage.filter), 0, null, null, null, seekTo, cacheImage.currentAccount, false);
+
+                    int w = 0;
+                    int h = 0;
+                    if (cacheImage.filter != null) {
+                        String[] args = cacheImage.filter.split("_");
+                        if (args.length >= 2) {
+                            float w_filter = Float.parseFloat(args[0]);
+                            float h_filter = Float.parseFloat(args[1]);
+                            w = (int) (w_filter * AndroidUtilities.density);
+                            h = (int) (h_filter * AndroidUtilities.density);
+                        }
+                    }
+                    fileDrawable = new AnimatedFileDrawable(cacheImage.finalFilePath, "d".equals(cacheImage.filter), 0, null, null, null, seekTo, cacheImage.currentAccount, false , w, h);
                 }
                 Thread.interrupted();
                 onPostExecute(fileDrawable);
@@ -1802,12 +1813,38 @@ public class ImageLoader {
 
         try {
             if (NekoConfig.saveCacheToPrivateDirectory || Environment.MEDIA_MOUNTED.equals(Environment.getExternalStorageState())) {
+                File path;
                 if (NekoConfig.saveCacheToPrivateDirectory) {
-                    telegramPath = new File(ApplicationLoader.applicationContext.getFilesDir(), "Telegram");
+                    path = ApplicationLoader.applicationContext.getFilesDir();
                 } else {
-                    telegramPath = new File(Environment.getExternalStorageDirectory(), "Telegram");
+                    path = Environment.getExternalStorageDirectory();
                 }
+                if (Build.VERSION.SDK_INT >= 19 && !TextUtils.isEmpty(SharedConfig.storageCacheDir)) {
+                    ArrayList<File> dirs = AndroidUtilities.getRootDirs();
+                    for (int a = 0, N = dirs.size(); a < N; a++) {
+                        File dir = dirs.get(a);
+                        if (dir.getAbsolutePath().startsWith(SharedConfig.storageCacheDir)) {
+                            path = dir;
+                            break;
+                        }
+                    }
+                }
+                telegramPath = new File(path, "Telegram");
                 telegramPath.mkdirs();
+                if (Build.VERSION.SDK_INT >= 19 && !telegramPath.isDirectory()) {
+                    ArrayList<File> dirs = AndroidUtilities.getDataDirs();
+                    if (dirs != null) {
+                        for (int a = 0, N = dirs.size(); a < N; a++) {
+                            File dir = dirs.get(a);
+                            if (dir.getAbsolutePath().startsWith(SharedConfig.storageCacheDir)) {
+                                path = dir;
+                                telegramPath = new File(path, "Telegram");
+                                telegramPath.mkdirs();
+                                break;
+                            }
+                        }
+                    }
+                }
 
                 if (telegramPath.isDirectory()) {
                     try {
@@ -2329,7 +2366,7 @@ public class ImageLoader {
 
                     if (cacheFile == null) {
                         int fileSize = 0;
-                        if (imageLocation.photoSize instanceof TLRPC.TL_photoStrippedSize) {
+                        if (imageLocation.photoSize instanceof TLRPC.TL_photoStrippedSize || imageLocation.photoSize instanceof TLRPC.TL_photoPathSize) {
                             onlyCache = true;
                         } else if (imageLocation.secureDocument != null) {
                             img.secureDocument = imageLocation.secureDocument;
@@ -2654,7 +2691,7 @@ public class ImageLoader {
             String url = object.getKey(parentObject, mediaLocation != null ? mediaLocation : imageLocation, true);
             if (object.path != null) {
                 url = url + "." + getHttpUrlExtension(object.path, "jpg");
-            } else if (object.photoSize instanceof TLRPC.TL_photoStrippedSize) {
+            } else if (object.photoSize instanceof TLRPC.TL_photoStrippedSize || object.photoSize instanceof TLRPC.TL_photoPathSize) {
                 url = url + "." + ext;
             } else if (object.location != null) {
                 url = url + "." + ext;
@@ -2718,7 +2755,7 @@ public class ImageLoader {
             thumbUrl = thumbLocation.getKey(parentObject, strippedLoc, true);
             if (thumbLocation.path != null) {
                 thumbUrl = thumbUrl + "." + getHttpUrlExtension(thumbLocation.path, "jpg");
-            } else if (thumbLocation.photoSize instanceof TLRPC.TL_photoStrippedSize) {
+            } else if (thumbLocation.photoSize instanceof TLRPC.TL_photoStrippedSize || thumbLocation.photoSize instanceof TLRPC.TL_photoPathSize) {
                 thumbUrl = thumbUrl + "." + thumbExt;
             } else if (thumbLocation.location != null) {
                 thumbUrl = thumbUrl + "." + thumbExt;
@@ -2770,8 +2807,10 @@ public class ImageLoader {
                 return;
             }
             HttpImageTask oldTask = img.httpTask;
-            img.httpTask = new HttpImageTask(oldTask.cacheImage, oldTask.imageSize);
-            httpTasks.add(img.httpTask);
+            if (oldTask != null) {
+                img.httpTask = new HttpImageTask(oldTask.cacheImage, oldTask.imageSize);
+                httpTasks.add(img.httpTask);
+            }
             runHttpTasks(false);
         });
     }
@@ -2783,8 +2822,10 @@ public class ImageLoader {
                 return;
             }
             ArtworkLoadTask oldTask = img.artworkTask;
-            img.artworkTask = new ArtworkLoadTask(oldTask.cacheImage);
-            artworkTasks.add(img.artworkTask);
+            if (oldTask != null) {
+                img.artworkTask = new ArtworkLoadTask(oldTask.cacheImage);
+                artworkTasks.add(img.artworkTask);
+            }
             runArtworkTasks(false);
         });
     }
@@ -3199,7 +3240,7 @@ public class ImageLoader {
             fileDir = location.volume_id != Integer.MIN_VALUE ? FileLoader.getDirectory(FileLoader.MEDIA_DIR_IMAGE) : FileLoader.getDirectory(FileLoader.MEDIA_DIR_CACHE);
         }
         final File cacheFile = new File(fileDir, fileName);
-        if (compressFormat == Bitmap.CompressFormat.JPEG && progressive) {
+        if (compressFormat == Bitmap.CompressFormat.JPEG && progressive && BuildVars.DEBUG_VERSION) {
             photoSize.size = Utilities.saveProgressiveJpeg(scaledBitmap, scaledBitmap.getWidth(), scaledBitmap.getHeight(), scaledBitmap.getRowBytes(), quality, cacheFile.getAbsolutePath());
         } else {
             FileOutputStream stream = new FileOutputStream(cacheFile);

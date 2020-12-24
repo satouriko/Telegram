@@ -13,19 +13,23 @@ import android.animation.AnimatorListenerAdapter;
 import android.animation.AnimatorSet;
 import android.animation.ObjectAnimator;
 import android.content.Context;
+import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 import android.os.Build;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.view.Gravity;
 import android.view.View;
+import android.view.accessibility.AccessibilityNodeInfo;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.ChatObject;
 import org.telegram.messenger.FileLog;
+import org.telegram.messenger.ImageLoader;
 import org.telegram.messenger.ImageLocation;
+import org.telegram.messenger.ImageReceiver;
 import org.telegram.messenger.LocaleController;
 import org.telegram.messenger.MediaDataController;
 import org.telegram.messenger.MessagesController;
@@ -71,16 +75,31 @@ public class ChatAvatarContainer extends FrameLayout implements NotificationCent
         super(context);
         parentFragment = chatActivity;
 
-        avatarImageView = new BackupImageView(context);
+        final boolean avatarClickable = parentFragment != null && parentFragment.getChatMode() == 0 && !UserObject.isReplyUser(parentFragment.getCurrentUser());
+        avatarImageView = new BackupImageView(context) {
+            @Override
+            public void onInitializeAccessibilityNodeInfo(AccessibilityNodeInfo info) {
+                super.onInitializeAccessibilityNodeInfo(info);
+                if (avatarClickable && getImageReceiver().hasNotThumb()) {
+                    info.setText(LocaleController.getString("AccDescrProfilePicture", R.string.AccDescrProfilePicture));
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                        info.addAction(new AccessibilityNodeInfo.AccessibilityAction(AccessibilityNodeInfo.ACTION_CLICK, LocaleController.getString("Open", R.string.Open)));
+                    }
+                } else {
+                    info.setVisibleToUser(false);
+                }
+            }
+        };
         if (parentFragment != null) {
             sharedMediaPreloader = new SharedMediaLayout.SharedMediaPreloader(chatActivity);
             if (parentFragment.isThreadChat() || parentFragment.getChatMode() == 2) {
                 avatarImageView.setVisibility(GONE);
             }
         }
+        avatarImageView.setContentDescription(LocaleController.getString("AccDescrProfilePicture", R.string.AccDescrProfilePicture));
         avatarImageView.setRoundRadius(AndroidUtilities.dp(21));
         addView(avatarImageView);
-        if (parentFragment != null && parentFragment.getChatMode() == 0 && !UserObject.isReplyUser(parentFragment.getCurrentUser())) {
+        if (avatarClickable) {
             avatarImageView.setOnClickListener(v -> openProfile(true));
         }
 
@@ -132,6 +151,16 @@ public class ChatAvatarContainer extends FrameLayout implements NotificationCent
         }
         TLRPC.User user = parentFragment.getCurrentUser();
         TLRPC.Chat chat = parentFragment.getCurrentChat();
+        ImageReceiver imageReceiver = avatarImageView.getImageReceiver();
+        String key = imageReceiver.getImageKey();
+        ImageLoader imageLoader = ImageLoader.getInstance();
+        if (key != null && !imageLoader.isInMemCache(key, false)) {
+            Drawable drawable = imageReceiver.getDrawable();
+            if (drawable instanceof BitmapDrawable) {
+                imageLoader.putImageToCache((BitmapDrawable) drawable, key);
+            }
+        }
+
         if (user != null) {
             Bundle args = new Bundle();
             if (UserObject.isUserSelf(user)) {
@@ -632,6 +661,14 @@ public class ChatAvatarContainer extends FrameLayout implements NotificationCent
             subtitleTextView.setText(title);
             subtitleTextView.setTextColor(Theme.getColor(Theme.key_actionBarDefaultSubtitle));
             subtitleTextView.setTag(Theme.key_actionBarDefaultSubtitle);
+        }
+    }
+
+    @Override
+    public void onInitializeAccessibilityNodeInfo(AccessibilityNodeInfo info) {
+        super.onInitializeAccessibilityNodeInfo(info);
+        if (info.isClickable() && Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            info.addAction(new AccessibilityNodeInfo.AccessibilityAction(AccessibilityNodeInfo.ACTION_CLICK, LocaleController.getString("OpenProfile", R.string.OpenProfile)));
         }
     }
 }

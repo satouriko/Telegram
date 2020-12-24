@@ -7,6 +7,7 @@ import android.animation.ValueAnimator;
 import android.content.Context;
 import android.graphics.Canvas;
 import android.os.Bundle;
+import android.text.TextUtils;
 import android.view.View;
 import android.view.ViewTreeObserver;
 import android.widget.FrameLayout;
@@ -40,7 +41,6 @@ import org.telegram.ui.Cells.SharedPhotoVideoCell;
 import org.telegram.ui.ChatActivity;
 import org.telegram.ui.DialogsActivity;
 import org.telegram.ui.FilteredSearchView;
-import org.telegram.ui.ViewPagerFixed;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -166,7 +166,7 @@ public class SearchViewPager extends ViewPagerFixed implements FilteredSearchVie
 
         FlickerLoadingView loadingView = new FlickerLoadingView(context);
         loadingView.setViewType(1);
-        emptyView = new StickerEmptyView(context, loadingView) {
+        emptyView = new StickerEmptyView(context, loadingView, StickerEmptyView.STICKER_TYPE_SEARCH) {
             @Override
             public void setVisibility(int visibility) {
                 if (noMediaFiltersSearchView.getTag() != null) {
@@ -231,7 +231,11 @@ public class SearchViewPager extends ViewPagerFixed implements FilteredSearchVie
     public void onTextChanged(String text) {
         lastSearchString = text;
         View view = getCurrentView();
-        search(view, getCurrentPosition(), text, false);
+        boolean reset = false;
+        if (!attached) {
+            reset = true;
+        }
+        search(view, getCurrentPosition(), text, reset);
     }
 
     private void search(View view, int position, String query, boolean reset) {
@@ -262,6 +266,8 @@ public class SearchViewPager extends ViewPagerFixed implements FilteredSearchVie
                 if (reset) {
                     emptyView.showProgress(!dialogsSearchAdapter.isSearching(), false);
                     emptyView.showProgress(dialogsSearchAdapter.isSearching(), false);
+                } else {
+                    emptyView.showProgress(dialogsSearchAdapter.isSearching(), true);
                 }
                 if (reset) {
                     noMediaFiltersSearchView.setVisibility(View.GONE);
@@ -338,9 +344,9 @@ public class SearchViewPager extends ViewPagerFixed implements FilteredSearchVie
             actionMode.addView(selectedMessagesCountTextView, LayoutHelper.createLinear(0, LayoutHelper.MATCH_PARENT, 1.0f, 72, 0, 0, 0));
             selectedMessagesCountTextView.setOnTouchListener((v, event) -> true);
 
-            gotoItem = actionMode.addItemWithWidth(gotoItemId, R.drawable.msg_message, AndroidUtilities.dp(54));
-            forwardNoQuoteItem = actionMode.addItemWithWidth(forwardNoQuoteItemId, R.drawable.msg_forward_noquote, AndroidUtilities.dp(54));
-            forwardItem = actionMode.addItemWithWidth(forwardItemId, R.drawable.msg_forward, AndroidUtilities.dp(54));
+            gotoItem = actionMode.addItemWithWidth(gotoItemId, R.drawable.msg_message, AndroidUtilities.dp(54), LocaleController.getString("AccDescrGoToMessage", R.string.AccDescrGoToMessage));
+            forwardNoQuoteItem = actionMode.addItemWithWidth(forwardNoQuoteItemId, R.drawable.msg_forward_noquote, AndroidUtilities.dp(54), LocaleController.getString("NoQuoteForward", R.string.NoQuoteForward));
+            forwardItem = actionMode.addItemWithWidth(forwardItemId, R.drawable.msg_forward, AndroidUtilities.dp(54), LocaleController.getString("Forward", R.string.Forward));
         }
         if (parent.getActionBar().getBackButton().getDrawable() instanceof MenuDrawable) {
             parent.getActionBar().setBackButtonDrawable(new BackDrawable(false));
@@ -775,6 +781,20 @@ public class SearchViewPager extends ViewPagerFixed implements FilteredSearchVie
             }
             return false;
         }
+    }
+
+    boolean attached;
+
+    @Override
+    protected void onAttachedToWindow() {
+        super.onAttachedToWindow();
+        attached = true;
+    }
+
+    @Override
+    protected void onDetachedFromWindow() {
+        super.onDetachedFromWindow();
+        attached = false;
     }
 
     public interface ChatPreviewDelegate {
