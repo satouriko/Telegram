@@ -264,14 +264,14 @@ public class ChatAvatarContainer extends FrameLayout implements NotificationCent
     }
 
     public void setTitle(CharSequence value) {
-        setTitle(value, false);
+        setTitle(value, false, false);
     }
 
-    public void setTitle(CharSequence value, boolean scam) {
+    public void setTitle(CharSequence value, boolean scam, boolean fake) {
         titleTextView.setText(value);
-        if (scam) {
+        if (scam || fake) {
             if (!(titleTextView.getRightDrawable() instanceof ScamDrawable)) {
-                ScamDrawable drawable = new ScamDrawable(11);
+                ScamDrawable drawable = new ScamDrawable(11, scam ? 0 : 1);
                 drawable.setColor(Theme.getColor(Theme.key_actionBarDefaultSubtitle));
                 titleTextView.setRightDrawable(drawable);
             }
@@ -670,5 +670,9 @@ public class ChatAvatarContainer extends FrameLayout implements NotificationCent
         if (info.isClickable() && Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             info.addAction(new AccessibilityNodeInfo.AccessibilityAction(AccessibilityNodeInfo.ACTION_CLICK, LocaleController.getString("OpenProfile", R.string.OpenProfile)));
         }
+    }
+
+    public SharedMediaLayout.SharedMediaPreloader getSharedMediaPreloader() {
+        return sharedMediaPreloader;
     }
 }

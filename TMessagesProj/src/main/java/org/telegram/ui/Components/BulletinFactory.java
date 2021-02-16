@@ -35,15 +35,15 @@ public final class BulletinFactory {
 
         MEDIA("MediaSavedHint", Icon.SAVED_TO_GALLERY),
 
-        PHOTO_TO_DOWNLOADS("PhotoSavedToDownloadsHint", Icon.SAVED_TO_DOWNLOADS),
+        PHOTO_TO_DOWNLOADS("PhotoSavedToDownloadsHint", R.string.PhotoSavedToDownloadsHint, Icon.SAVED_TO_DOWNLOADS),
         VIDEO_TO_DOWNLOADS("VideoSavedToDownloadsHint", R.string.VideoSavedToDownloadsHint, Icon.SAVED_TO_DOWNLOADS),
 
         GIF("GifSavedToDownloadsHint", Icon.SAVED_TO_DOWNLOADS),
 
-        AUDIO("AudioSavedHint", Icon.SAVED_TO_MUSIC),
+        AUDIO("AudioSavedHint", R.string.AudioSavedHint, Icon.SAVED_TO_MUSIC),
         AUDIOS("AudiosSavedHint", Icon.SAVED_TO_MUSIC),
 
-        UNKNOWN("FileSavedHint", Icon.SAVED_TO_DOWNLOADS),
+        UNKNOWN("FileSavedHint", R.string.FileSavedHint, Icon.SAVED_TO_DOWNLOADS),
         UNKNOWNS("FilesSavedHint", Icon.SAVED_TO_DOWNLOADS);
 
         private final String localeKey;
@@ -226,6 +226,12 @@ public final class BulletinFactory {
 
     @CheckResult
     public static Bulletin createUnpinAllMessagesBulletin(BaseFragment fragment, int count, boolean hide, Runnable undoAction, Runnable delayedAction) {
+        if (fragment.getParentActivity() == null) {
+            if (delayedAction != null) {
+                delayedAction.run();
+            }
+            return null;
+        }
         Bulletin.ButtonLayout buttonLayout;
         if (hide) {
             final Bulletin.TwoLineLottieLayout layout = new Bulletin.TwoLineLottieLayout(fragment.getParentActivity());
@@ -287,6 +293,11 @@ public final class BulletinFactory {
     @CheckResult
     public static Bulletin createCopyLinkBulletin(BaseFragment fragment) {
         return of(fragment).createCopyLinkBulletin();
+    }
+
+    @CheckResult
+    public static Bulletin createCopyLinkBulletin(FrameLayout containerView) {
+        return of(containerView).createCopyLinkBulletin();
     }
 
     @CheckResult

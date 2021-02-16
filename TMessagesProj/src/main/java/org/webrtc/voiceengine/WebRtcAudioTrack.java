@@ -22,7 +22,6 @@ import androidx.annotation.Nullable;
 import java.lang.Thread;
 import java.nio.ByteBuffer;
 
-import org.telegram.messenger.FileLog;
 import org.webrtc.ContextUtils;
 import org.webrtc.Logging;
 import org.webrtc.ThreadUtils;
@@ -188,7 +187,7 @@ public class WebRtcAudioTrack {
         try {
           audioTrack.stop();
           Logging.d(TAG, "AudioTrack.stop is done.");
-        } catch (IllegalStateException e) {
+        } catch (Exception e) {
           Logging.e(TAG, "AudioTrack.stop failed: " + e.getMessage());
         }
       }
