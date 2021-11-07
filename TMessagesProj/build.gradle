@@ -44,12 +44,14 @@ dependencies {
     coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:1.1.1'
 }
 
+ext.abiCodes = ['armeabi-v7a': 3, 'arm64-v8a': 7, x86: 4, x86_64: 8, 'afat': 9]
+
 android {
     compileSdkVersion 30
     buildToolsVersion '30.0.3'
     ndkVersion "21.1.6352462"
 
-    defaultConfig.applicationId = "org.telegram.messenger"
+    defaultConfig.applicationId = "com.cool2645.nekolite"
 
     sourceSets.main.jniLibs.srcDirs = ['./jni/']
 
@@ -77,20 +79,26 @@ android {
     }
 
     signingConfigs {
-        debug {
-            storeFile file("config/release.keystore")
-            storePassword RELEASE_STORE_PASSWORD
-            keyAlias RELEASE_KEY_ALIAS
-            keyPassword RELEASE_KEY_PASSWORD
+        def keystorePwd = null
+        def alias = null
+        def pwd = null
+        if (project.rootProject.file('local.properties').exists()) {
+            Properties properties = new Properties()
+            properties.load(project.rootProject.file('local.properties').newDataInputStream())
+            keystorePwd = properties.getProperty("RELEASE_STORE_PASSWORD")
+            alias = properties.getProperty("RELEASE_KEY_ALIAS")
+            pwd = properties.getProperty("RELEASE_KEY_PASSWORD")
         }
-
         release {
             storeFile file("config/release.keystore")
-            storePassword RELEASE_STORE_PASSWORD
-            keyAlias RELEASE_KEY_ALIAS
-            keyPassword RELEASE_KEY_PASSWORD
+            storePassword keystorePwd != null ? keystorePwd : System.getenv("KEYSTORE_PASS")
+            keyAlias alias != null ? alias : System.getenv("ALIAS_NAME")
+            keyPassword pwd != null ? pwd : System.getenv("ALIAS_PASS")
+        }
+        debug {
         }
     }
+
 
     buildTypes {
         debug {
@@ -105,46 +113,6 @@ android {
             ndk.debugSymbolLevel = 'FULL'
         }
 
-        /*debugAsan {
-            debuggable true
-            jniDebuggable true
-            signingConfig signingConfigs.debug
-            applicationIdSuffix ".beta"
-            minifyEnabled true
-            multiDexEnabled true
-            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
-
-            packagingOptions {
-                doNotStrip "**.so"
-            }
-
-            sourceSets {
-                main {
-                    jniLibs {
-                        srcDir {
-                            'jniLibs'
-                        }
-                    }
-                    resources {
-                        srcDir {
-                            'jniRes'
-                        }
-                    }
-                }
-            }
-        }*/
-
-        HA {
-            debuggable false
-            jniDebuggable false
-            signingConfig signingConfigs.debug
-            applicationIdSuffix ".beta"
-            minifyEnabled true
-            multiDexEnabled true
-            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
-            ndk.debugSymbolLevel = 'FULL'
-        }
-
         release {
             debuggable false
             jniDebuggable false
@@ -153,156 +121,31 @@ android {
             shrinkResources false
             multiDexEnabled true
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
-            ndk.debugSymbolLevel = 'FULL'
+            dependencies {
+                implementation 'com.android.support:multidex:1.0.3'
+            }
+            manifestPlaceholders = [applicationClassName: "MultiDexApplicationLoader"]
         }
     }
 
     sourceSets.debug {
-        manifest.srcFile 'config/debug/AndroidManifest.xml'
-    }
-
-    /*sourceSets.debugAsan {
-        manifest.srcFile 'config/debug/AndroidManifest.xml'
-    }*/
-
-    sourceSets.HA {
-        manifest.srcFile 'config/debug/AndroidManifest.xml'
+        manifest.srcFile 'config/debug/AndroidManifest_SDK23.xml'
     }
 
     sourceSets.release {
-        manifest.srcFile 'config/release/AndroidManifest.xml'
-    }
-
-    flavorDimensions "minApi"
-
-    productFlavors {
-        armv7 {
-            ndk {
-                abiFilters "armeabi-v7a"
-            }
-            ext {
-                abiVersionCode = 1
-            }
-        }
-        x86 {
-            ndk {
-                abiFilters "x86"
-            }
-            ext {
-                abiVersionCode = 2
-            }
-        }
-        armv7_SDK23 {
-            ndk {
-                abiFilters "armeabi-v7a"
-            }
-            sourceSets.debug {
-                manifest.srcFile 'config/debug/AndroidManifest_SDK23.xml'
-            }
-            sourceSets.release {
-                manifest.srcFile 'config/release/AndroidManifest_SDK23.xml'
-            }
-            minSdkVersion 23
-            ext {
-                abiVersionCode = 3
-            }
-        }
-        x86_SDK23 {
-            ndk {
-                abiFilters "x86"
-            }
-            sourceSets.debug {
-                manifest.srcFile 'config/debug/AndroidManifest_SDK23.xml'
-            }
-            sourceSets.release {
-                manifest.srcFile 'config/release/AndroidManifest_SDK23.xml'
-            }
-            minSdkVersion 23
-            ext {
-                abiVersionCode = 4
-            }
-        }
-        arm64 {
-            ndk {
-                abiFilters "arm64-v8a"
-            }
-            ext {
-                abiVersionCode = 5
-            }
-        }
-        x64 {
-            ndk {
-                abiFilters "x86_64"
-            }
-            ext {
-                abiVersionCode = 6
-            }
-        }
-        arm64_SDK23 {
-            ndk {
-                abiFilters "arm64-v8a"
-            }
-            sourceSets.debug {
-                manifest.srcFile 'config/debug/AndroidManifest_SDK23.xml'
-            }
-            /*sourceSets.debugAsan {
-                manifest.srcFile 'config/debug/AndroidManifest_SDK23.xml'
-            }*/
-            sourceSets.release {
-                manifest.srcFile 'config/release/AndroidManifest_SDK23.xml'
-            }
-            minSdkVersion 23
-            ext {
-                abiVersionCode = 7
-            }
-        }
-        x64_SDK23 {
-            ndk {
-                abiFilters "x86_64"
-            }
-            sourceSets.debug {
-                manifest.srcFile 'config/debug/AndroidManifest_SDK23.xml'
-            }
-            sourceSets.release {
-                manifest.srcFile 'config/release/AndroidManifest_SDK23.xml'
-            }
-            minSdkVersion 23
-            ext {
-                abiVersionCode = 8
-            }
-        }
-        afat {
-            ndk {
-                abiFilters "armeabi-v7a", "arm64-v8a", "x86", "x86_64"
-            }
-            sourceSets.debug {
-                manifest.srcFile 'config/debug/AndroidManifest_SDK23.xml'
-            }
-            /*sourceSets.debugAsan {
-                manifest.srcFile 'config/debug/AndroidManifest_SDK23.xml'
-            }*/
-            sourceSets.release {
-                manifest.srcFile 'config/release/AndroidManifest_SDK23.xml'
-            }
-            ext {
-                abiVersionCode = 9
-            }
-        }
+        manifest.srcFile 'config/release/AndroidManifest_SDK23.xml'
+        java.srcDirs = ['src/multidex/java']
     }
 
     defaultConfig.versionCode = 2227
 
     applicationVariants.all { variant ->
         variant.outputs.all { output ->
-            outputFileName = "app.apk"
-            output.versionCodeOverride = defaultConfig.versionCode * 10 + variant.productFlavors.get(0).abiVersionCode
-        }
-    }
-
-    variantFilter { variant ->
-        def names = variant.flavors*.name
-        if (variant.buildType.name != "release" && !names.contains("afat")) {
-            setIgnore(true)
+            def abi = output.getFilter(com.android.build.OutputFile.ABI)
+            if (abi == null) abi = 'afat'
+            outputFileName = "Nanogram-${defaultConfig.versionName}-${defaultConfig.versionCode}-${abi}-${buildType.name}.apk"
+            def abiVersionCode = project.ext.abiCodes.get(abi)
+            output.versionCodeOverride = defaultConfig.versionCode * 10 + abiVersionCode
         }
     }
 
@@ -319,6 +162,11 @@ android {
                 arguments '-DANDROID_STL=c++_static', '-DANDROID_PLATFORM=android-16', "-j=16"
             }
         }
+    }
+
+    splits.abi {
+        enable true
+        universalApk true
     }
 }
 

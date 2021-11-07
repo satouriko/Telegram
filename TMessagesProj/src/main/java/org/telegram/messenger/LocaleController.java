@@ -939,6 +939,12 @@ public class LocaleController {
     }
 
     private String getStringInternal(String key, String fallback, int res) {
+        if (key.equals("AppName")) {
+            return "Nanogram";
+        }
+        if (key.equals("AppNameBeta")) {
+            return "Nanogram (beta)";
+        }
         String value = BuildVars.USE_CLOUD_STRINGS ? localeValues.get(key) : null;
         if (value == null) {
             if (BuildVars.USE_CLOUD_STRINGS && fallback != null) {

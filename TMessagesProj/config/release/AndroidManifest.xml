@@ -10,27 +10,26 @@
     <uses-feature android:name="android.hardware.LOCATION" android:required="false" />
 
     <uses-permission android:name="com.google.android.c2dm.permission.RECEIVE" />
-    <uses-permission android:name="org.telegram.messenger.permission.MAPS_RECEIVE"/>
+    <uses-permission android:name="${applicationId}.permission.MAPS_RECEIVE"/>
     <uses-permission android:name="com.google.android.providers.gsf.permission.READ_GSERVICES"/>
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
 
-    <permission android:name="org.telegram.messenger.permission.MAPS_RECEIVE" android:protectionLevel="signature"/>
+    <permission android:name="${applicationId}.permission.MAPS_RECEIVE" android:protectionLevel="signature"/>
 
     <application
         android:allowBackup="false"
         android:icon="@mipmap/ic_launcher"
-        android:roundIcon="@mipmap/ic_launcher_round"
-        android:label="@string/AppName"
+        android:roundIcon="@mipmap/ic_launcher"
+        android:label="@string/Nanogram"
         android:theme="@style/Theme.TMessages.Start"
-        android:name=".ApplicationLoader"
         android:hardwareAccelerated="@bool/useHardwareAcceleration"
         android:largeHeap="true"
         android:supportsRtl="false"
         android:requestLegacyExternalStorage="true"
         tools:replace="android:supportsRtl">
 
-        <meta-data android:name="com.google.android.maps.v2.API_KEY" android:value="AIzaSyA-t0jLPjUt2FxrA8VPK2EiYHcYcboIR6k" />
+        <meta-data android:name="com.google.android.maps.v2.API_KEY" android:value="AIzaSyApykg3MAYWc22Zpr9xBQOwVpwDsHKkNqU" />
 
         <service
             android:name=".GcmPushListenerService">

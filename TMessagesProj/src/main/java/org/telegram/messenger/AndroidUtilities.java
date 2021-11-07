@@ -708,27 +708,7 @@ public class AndroidUtilities {
     }
 
     public static boolean isGoogleMapsInstalled(final BaseFragment fragment) {
-        try {
-            ApplicationLoader.applicationContext.getPackageManager().getApplicationInfo("com.google.android.apps.maps", 0);
-            return true;
-        } catch (PackageManager.NameNotFoundException e) {
-            if (fragment.getParentActivity() == null) {
-                return false;
-            }
-            AlertDialog.Builder builder = new AlertDialog.Builder(fragment.getParentActivity());
-            builder.setMessage(LocaleController.getString("InstallGoogleMaps", R.string.InstallGoogleMaps));
-            builder.setPositiveButton(LocaleController.getString("OK", R.string.OK), (dialogInterface, i) -> {
-                try {
-                    Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=com.google.android.apps.maps"));
-                    fragment.getParentActivity().startActivityForResult(intent, 500);
-                } catch (Exception e1) {
-                    FileLog.e(e1);
-                }
-            });
-            builder.setNegativeButton(LocaleController.getString("Cancel", R.string.Cancel), null);
-            fragment.showDialog(builder.create());
-            return false;
-        }
+        return true;
     }
 
     public static int[] toIntArray(List<Integer> integers) {
@@ -1645,7 +1625,7 @@ public class AndroidUtilities {
     public static String formapMapUrl(int account, double lat, double lon, int width, int height, boolean marker, int zoom, int provider) {
         int scale = Math.min(2, (int) Math.ceil(AndroidUtilities.density));
         if (provider == -1) {
-            provider = MessagesController.getInstance(account).mapProvider;
+            provider = 2;
         }
         if (provider == 1 || provider == 3) {
             String lang = null;
@@ -1665,7 +1645,7 @@ public class AndroidUtilities {
                 return String.format(Locale.US, "https://static-maps.yandex.ru/1.x/?ll=%.6f,%.6f&z=%d&size=%d,%d&l=map&scale=%d&lang=%s", lon, lat, zoom, width * scale, height * scale, scale, lang);
             }
         } else {
-            String k = MessagesController.getInstance(account).mapKey;
+            String k = "";
             if (!TextUtils.isEmpty(k)) {
                 if (marker) {
                     return String.format(Locale.US, "https://maps.googleapis.com/maps/api/staticmap?center=%.6f,%.6f&zoom=%d&size=%dx%d&maptype=roadmap&scale=%d&markers=color:red%%7Csize:mid%%7C%.6f,%.6f&sensor=false&key=%s", lat, lon, zoom, width, height, scale, lat, lon, k);
@@ -2684,6 +2664,17 @@ public class AndroidUtilities {
         return key_hash;
     }
 
+    public static File getMessageAttachment(TLRPC.Message messageOwner) {
+        File f = null;
+        if (messageOwner.attachPath != null && messageOwner.attachPath.length() != 0) {
+            f = new File(messageOwner.attachPath);
+        }
+        if (f == null || !f.exists()) {
+            f = FileLoader.getPathToMessage(messageOwner);
+        }
+        return f;
+    }
+
     public static void openDocument(MessageObject message, Activity activity, BaseFragment parentFragment) {
         if (message == null) {
             return;
@@ -2692,14 +2683,8 @@ public class AndroidUtilities {
         if (document == null) {
             return;
         }
-        File f = null;
         String fileName = message.messageOwner.media != null ? FileLoader.getAttachFileName(document) : "";
-        if (message.messageOwner.attachPath != null && message.messageOwner.attachPath.length() != 0) {
-            f = new File(message.messageOwner.attachPath);
-        }
-        if (f == null || f != null && !f.exists()) {
-            f = FileLoader.getPathToMessage(message.messageOwner);
-        }
+        File f = getMessageAttachment(message.messageOwner);
         if (f != null && f.exists()) {
             if (parentFragment != null && f.getName().toLowerCase().endsWith("attheme")) {
                 Theme.ThemeInfo themeInfo = Theme.applyThemeFile(f, message.getDocumentName(), null, true);

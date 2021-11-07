@@ -177,6 +177,9 @@ import java.util.concurrent.CountDownLatch;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
+import tw.nekomimi.nekogram.NekoConfig;
+import tw.nekomimi.nekogram.NekoSettingsActivity;
+
 public class ProfileActivity extends BaseFragment implements NotificationCenter.NotificationCenterDelegate, DialogsActivity.DialogsActivityDelegate, SharedMediaLayout.SharedMediaPreloaderDelegate, ImageUpdater.ImageUpdaterDelegate {
 
     private RecyclerListView listView;
@@ -355,6 +358,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
     private int chatRow;
     private int filtersRow;
     private int devicesRow;
+    private int nekoRow;
     private int devicesSectionRow;
     private int helpHeaderRow;
     private int questionRow;
@@ -2547,6 +2551,8 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                 presentFragment(new FiltersSetupActivity());
             } else if (position == devicesRow) {
                 presentFragment(new SessionsActivity(0));
+            } else if (position == nekoRow) {
+                presentFragment(new NekoSettingsActivity());
             } else if (position == questionRow) {
                 showDialog(AlertsCreator.createSupportAlert(ProfileActivity.this));
             } else if (position == faqRow) {
@@ -5038,6 +5044,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
         chatRow = -1;
         filtersRow = -1;
         devicesRow = -1;
+        nekoRow = -1;
         devicesSectionRow = -1;
         helpHeaderRow = -1;
         questionRow = -1;
@@ -5119,6 +5126,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                     filtersRow = rowCount++;
                 }
                 devicesRow = rowCount++;
+                nekoRow = rowCount++;
                 languageRow = rowCount++;
                 devicesSectionRow = rowCount++;
                 helpHeaderRow = rowCount++;
@@ -6426,7 +6434,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                                 abi = "universal " + Build.CPU_ABI + " " + Build.CPU_ABI2;
                                 break;
                         }
-                        cell.setText(LocaleController.formatString("TelegramVersion", R.string.TelegramVersion, String.format(Locale.US, "v%s (%d) %s", pInfo.versionName, code, abi)));
+                        cell.setText(String.format("%1$s %2$s", LocaleController.getString("AppName", R.string.AppName), String.format(Locale.US, "v%s (%d) %s", pInfo.versionName, code, abi)));
                     } catch (Exception e) {
                         FileLog.e(e);
                     }
@@ -6643,6 +6651,8 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                         textCell.setText("Switch Backend", false);
                     } else if (position == devicesRow) {
                         textCell.setTextAndIcon(LocaleController.getString("Devices", R.string.Devices), R.drawable.menu_devices, true);
+                    } else if (position == nekoRow) {
+                        textCell.setTextAndIcon(LocaleController.getString("NekoSettings", R.string.NekoSettings), R.drawable.menu_settings, true);
                     } else if (position == setAvatarRow) {
                         textCell.setColors(Theme.key_windowBackgroundWhiteBlueIcon, Theme.key_windowBackgroundWhiteBlueButton);
                         textCell.setTextAndIcon(LocaleController.getString("SetProfilePhoto", R.string.SetProfilePhoto), R.drawable.msg_addphoto, false);
@@ -6768,7 +6778,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                 return position == notificationRow || position == numberRow || position == privacyRow ||
                         position == languageRow || position == setUsernameRow || position == bioRow ||
                         position == versionRow || position == dataRow || position == chatRow ||
-                        position == questionRow || position == devicesRow || position == filtersRow ||
+                        position == questionRow || position == devicesRow || position == nekoRow || position == filtersRow ||
                         position == faqRow || position == policyRow || position == sendLogsRow ||
                         position == clearLogsRow || position == switchBackendRow || position == setAvatarRow;
             }
@@ -6806,7 +6816,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                     position == addMemberRow || position == joinRow || position == unblockRow ||
                     position == sendMessageRow || position == notificationRow || position == privacyRow ||
                     position == languageRow || position == dataRow || position == chatRow ||
-                    position == questionRow || position == devicesRow || position == filtersRow ||
+                    position == questionRow || position == devicesRow || position == nekoRow || position == filtersRow ||
                     position == faqRow || position == policyRow || position == sendLogsRow ||
                     position == clearLogsRow || position == switchBackendRow || position == setAvatarRow) {
                 return 4;

@@ -1,6 +1,12 @@
+**/.DS_Store
 .idea/
 .gradle/
 build/
 obj/
 *.iml
 local.properties
+.externalNativeBuild
+.cxx
+afat
+arm64
+release

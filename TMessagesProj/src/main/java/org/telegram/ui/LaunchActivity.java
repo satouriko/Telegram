@@ -144,7 +144,11 @@ import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
 
-public class LaunchActivity extends Activity implements ActionBarLayout.ActionBarLayoutDelegate, NotificationCenter.NotificationCenterDelegate, DialogsActivity.DialogsActivityDelegate {
+import tw.nekomimi.nekogram.NekoConfig;
+import tw.nekomimi.nekogram.NekoSettingsActivity;
+import tw.nekomimi.nekogram.UpdateHelper;
+
+public class LaunchActivity extends Activity implements ActionBarLayout.ActionBarLayoutDelegate, NotificationCenter.NotificationCenterDelegate, DialogsActivity.DialogsActivityDelegate, UpdateHelper.UpdateHelperDelegate {
 
     private static final String EXTRA_ACTION_TOKEN = "actions.fulfillment.extra.ACTION_TOKEN";
 
@@ -209,6 +213,20 @@ public class LaunchActivity extends Activity implements ActionBarLayout.ActionBa
     private AlertDialog loadingThemeProgressDialog;
 
     private Runnable lockRunnable;
+
+    @Override
+    public int getClassGuid() {
+        BaseFragment fragment = mainFragmentsStack.get(mainFragmentsStack.size() - 1);
+        if (fragment != null) {
+            return fragment.getClassGuid();
+        }
+        return 0;
+    }
+
+    @Override
+    public void didCheckNewVersionAvailable(String error) {
+
+    }
 
     private static final int PLAY_SERVICES_REQUEST_CHECK_SETTINGS = 140;
 
@@ -879,7 +897,7 @@ public class LaunchActivity extends Activity implements ActionBarLayout.ActionBa
                 }
             }
         }
-        if (SharedConfig.noStatusBar) {
+        if (SharedConfig.noStatusBar && Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             getWindow().setStatusBarColor(0);
         }
     }
@@ -1876,6 +1894,8 @@ public class LaunchActivity extends Activity implements ActionBarLayout.ActionBa
                                         } else {
                                             open_settings = 1;
                                         }
+                                    } else if (url.startsWith("tg:upgrade") || url.startsWith("tg://upgrade") || url.startsWith("tg:update") || url.startsWith("tg://update")) {
+                                        open_settings = 7;
                                     } else if ((url.startsWith("tg:search") || url.startsWith("tg://search"))) {
                                         url = url.replace("tg:search", "tg://telegram.org").replace("tg://search", "tg://telegram.org");
                                         data = Uri.parse(url);
@@ -2148,6 +2168,10 @@ public class LaunchActivity extends Activity implements ActionBarLayout.ActionBa
                 } else if (open_settings == 5) {
                     fragment = new ActionIntroActivity(ActionIntroActivity.ACTION_TYPE_CHANGE_PHONE_NUMBER);
                     closePrevious = true;
+                } else if (open_settings == 7) {
+                    Bundle args = new Bundle();
+                    args.putBoolean("update", true);
+                    fragment = new NekoSettingsActivity(args);
                 } else {
                     fragment = null;
                 }
@@ -3933,6 +3957,7 @@ public class LaunchActivity extends Activity implements ActionBarLayout.ActionBa
         } else if (UserConfig.getInstance(0).pendingAppUpdate != null) {
             showUpdateActivity(UserConfig.selectedAccount, UserConfig.getInstance(0).pendingAppUpdate, true);
         }
+        UpdateHelper.getInstance().checkNewVersionAvailable(this, true);
         checkAppUpdate(false);
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {

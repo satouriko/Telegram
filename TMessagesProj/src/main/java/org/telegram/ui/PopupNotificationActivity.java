@@ -929,7 +929,7 @@ public class PopupNotificationActivity extends Activity implements NotificationC
                 double lat = geoPoint.lat;
                 double lon = geoPoint._long;
 
-                if (MessagesController.getInstance(messageObject.currentAccount).mapProvider == 2) {
+                if (true) {
                     imageView.setImage(ImageLocation.getForWebFile(WebFile.createWithGeoPoint(geoPoint, 100, 100, 15, Math.min(2, (int) Math.ceil(AndroidUtilities.density)))), null, null, null, messageObject);
                 } else {
                     String currentUrl = AndroidUtilities.formapMapUrl(messageObject.currentAccount, lat, lon, 100, 100, true, 15, -1);
