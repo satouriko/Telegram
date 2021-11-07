@@ -23,17 +23,19 @@ import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.LocaleController;
 import org.telegram.ui.ActionBar.SimpleTextView;
 import org.telegram.ui.ActionBar.Theme;
+import org.telegram.ui.Components.RLottieDrawable;
+import org.telegram.ui.Components.RLottieImageView;
 
 public class TextCell extends FrameLayout {
 
-    private SimpleTextView textView;
-    private SimpleTextView valueTextView;
-    private ImageView imageView;
+    public final SimpleTextView textView;
+    public final SimpleTextView valueTextView;
+    public final RLottieImageView imageView;
     private ImageView valueImageView;
     private int leftPadding;
     private boolean needDivider;
     private int offsetFromImage = 71;
-    private int imageLeft = 21;
+    public int imageLeft = 21;
     private boolean inDialogs;
 
     public TextCell(Context context) {
@@ -59,7 +61,7 @@ public class TextCell extends FrameLayout {
         valueTextView.setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);
         addView(valueTextView);
 
-        imageView = new ImageView(context);
+        imageView = new RLottieImageView(context);
         imageView.setScaleType(ImageView.ScaleType.CENTER);
         imageView.setColorFilter(new PorterDuffColorFilter(Theme.getColor(dialog ? Theme.key_dialogIcon : Theme.key_windowBackgroundWhiteGrayIcon), PorterDuff.Mode.MULTIPLY));
         addView(imageView);
@@ -77,6 +79,10 @@ public class TextCell extends FrameLayout {
 
     public SimpleTextView getTextView() {
         return textView;
+    }
+
+    public RLottieImageView getImageView() {
+        return imageView;
     }
 
     public SimpleTextView getValueTextView() {
@@ -174,7 +180,11 @@ public class TextCell extends FrameLayout {
         textView.setText(text);
         valueTextView.setText(null);
         imageView.setColorFilter(null);
-        imageView.setImageDrawable(drawable);
+        if (drawable instanceof RLottieDrawable) {
+            imageView.setAnimation((RLottieDrawable) drawable);
+        } else {
+            imageView.setImageDrawable(drawable);
+        }
         imageView.setVisibility(VISIBLE);
         valueTextView.setVisibility(GONE);
         valueImageView.setVisibility(GONE);
@@ -239,6 +249,14 @@ public class TextCell extends FrameLayout {
             } else {
                 info.setText(text);
             }
+        }
+    }
+
+    public void setNeedDivider(boolean needDivider) {
+        if (this.needDivider != needDivider) {
+            this.needDivider = needDivider;
+            setWillNotDraw(!needDivider);
+            invalidate();
         }
     }
 }

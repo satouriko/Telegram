@@ -19,7 +19,6 @@ import android.widget.TextView;
 
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.ContactsController;
-import org.telegram.messenger.ImageLocation;
 import org.telegram.messenger.MessagesStorage;
 import org.telegram.messenger.NotificationsController;
 import org.telegram.messenger.UserConfig;
@@ -91,7 +90,7 @@ public class DrawerUserCell extends FrameLayout {
         avatarDrawable.setInfo(user);
         textView.setText(ContactsController.formatName(user.first_name, user.last_name));
         imageView.getImageReceiver().setCurrentAccount(account);
-        imageView.setImage(ImageLocation.getForUser(user, false), "50_50", avatarDrawable, user);
+        imageView.setForUserOrChat(user, avatarDrawable);
         checkBox.setVisibility(account == UserConfig.selectedAccount ? VISIBLE : INVISIBLE);
     }
 

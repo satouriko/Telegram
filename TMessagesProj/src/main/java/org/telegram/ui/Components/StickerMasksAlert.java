@@ -281,15 +281,15 @@ public class StickerMasksAlert extends BottomSheet implements NotificationCenter
         }
     }
 
-    public StickerMasksAlert(Context context, boolean isVideo) {
-        super(context, true);
+    public StickerMasksAlert(Context context, boolean isVideo, Theme.ResourcesProvider resourcesProvider) {
+        super(context, true, resourcesProvider);
         behindKeyboardColorKey = null;
         behindKeyboardColor = 0xff252525;
         useLightStatusBar = false;
 
         currentType = MediaDataController.TYPE_IMAGE;
 
-        NotificationCenter.getGlobalInstance().addObserver(this, NotificationCenter.emojiDidLoad);
+        NotificationCenter.getGlobalInstance().addObserver(this, NotificationCenter.emojiLoaded);
         NotificationCenter.getInstance(currentAccount).addObserver(this, NotificationCenter.stickersDidLoad);
         NotificationCenter.getInstance(currentAccount).addObserver(this, NotificationCenter.recentDocumentsDidLoad);
         MediaDataController.getInstance(currentAccount).loadRecents(MediaDataController.TYPE_IMAGE, false, true, false);
@@ -460,7 +460,7 @@ public class StickerMasksAlert extends BottomSheet implements NotificationCenter
 
             @Override
             public boolean onInterceptTouchEvent(MotionEvent event) {
-                boolean result = ContentPreviewViewer.getInstance().onInterceptTouchEvent(event, gridView, containerView.getMeasuredHeight(), contentPreviewViewerDelegate);
+                boolean result = ContentPreviewViewer.getInstance().onInterceptTouchEvent(event, gridView, containerView.getMeasuredHeight(), contentPreviewViewerDelegate, resourcesProvider);
                 return super.onInterceptTouchEvent(event) || result;
             }
         };
@@ -517,7 +517,7 @@ public class StickerMasksAlert extends BottomSheet implements NotificationCenter
         gridView.setGlowColor(0xff252525);
         stickersSearchGridAdapter = new StickersSearchGridAdapter(context);
         gridView.setAdapter(stickersGridAdapter = new StickersGridAdapter(context));
-        gridView.setOnTouchListener((v, event) -> ContentPreviewViewer.getInstance().onTouch(event, gridView, containerView.getMeasuredHeight(), stickersOnItemClickListener, contentPreviewViewerDelegate));
+        gridView.setOnTouchListener((v, event) -> ContentPreviewViewer.getInstance().onTouch(event, gridView, containerView.getMeasuredHeight(), stickersOnItemClickListener, contentPreviewViewerDelegate, resourcesProvider));
         stickersOnItemClickListener = (view, position) -> {
             if (!(view instanceof StickerEmojiCell)) {
                 return;
@@ -530,7 +530,7 @@ public class StickerMasksAlert extends BottomSheet implements NotificationCenter
         gridView.setOnItemClickListener(stickersOnItemClickListener);
         containerView.addView(gridView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
 
-        stickersTab = new ScrollSlidingTabStrip(context) {
+        stickersTab = new ScrollSlidingTabStrip(context, resourcesProvider) {
             @Override
             public boolean onInterceptTouchEvent(MotionEvent ev) {
                 if (getParent() != null) {
@@ -826,11 +826,10 @@ public class StickerMasksAlert extends BottomSheet implements NotificationCenter
             TLRPC.TL_messages_stickerSet stickerSet = stickerSets[currentType].get(a);
             TLRPC.Document document = stickerSet.documents.get(0);
             TLObject thumb = FileLoader.getClosestPhotoSizeWithSize(stickerSet.set.thumbs, 90);
-            SvgHelper.SvgDrawable svgThumb = DocumentObject.getSvgThumb(stickerSet.set.thumbs, Theme.key_windowBackgroundGray, 1.0f);
             if (thumb == null) {
                 thumb = document;
             }
-            stickersTab.addStickerTab(thumb, svgThumb, document, stickerSet).setContentDescription(stickerSet.set.title + ", " + LocaleController.getString("AccDescrStickerSet", R.string.AccDescrStickerSet));
+            stickersTab.addStickerTab(thumb, document, stickerSet).setContentDescription(stickerSet.set.title + ", " + LocaleController.getString("AccDescrStickerSet", R.string.AccDescrStickerSet));
         }
         stickersTab.commitUpdate();
         stickersTab.updateTabStyles();
@@ -901,7 +900,7 @@ public class StickerMasksAlert extends BottomSheet implements NotificationCenter
     @Override
     public void dismissInternal() {
         super.dismissInternal();
-        NotificationCenter.getGlobalInstance().removeObserver(this, NotificationCenter.emojiDidLoad);
+        NotificationCenter.getGlobalInstance().removeObserver(this, NotificationCenter.emojiLoaded);
         NotificationCenter.getInstance(currentAccount).removeObserver(this, NotificationCenter.stickersDidLoad);
         NotificationCenter.getInstance(currentAccount).removeObserver(this, NotificationCenter.recentDocumentsDidLoad);
     }
@@ -948,7 +947,7 @@ public class StickerMasksAlert extends BottomSheet implements NotificationCenter
             if (!isGif && (type == currentType || type == MediaDataController.TYPE_FAVE)) {
                 checkDocuments(false);
             }
-        } else if (id == NotificationCenter.emojiDidLoad) {
+        } else if (id == NotificationCenter.emojiLoaded) {
             if (gridView != null) {
                 int count = gridView.getChildCount();
                 for (int a = 0; a < count; a++) {
@@ -1058,7 +1057,7 @@ public class StickerMasksAlert extends BottomSheet implements NotificationCenter
                     view = new EmptyCell(context);
                     break;
                 case 2:
-                    StickerSetNameCell cell = new StickerSetNameCell(context, false);
+                    StickerSetNameCell cell = new StickerSetNameCell(context, false, resourcesProvider);
                     cell.setTitleColor(0xff888888);
                     view = cell;
                     break;
@@ -1465,7 +1464,7 @@ public class StickerMasksAlert extends BottomSheet implements NotificationCenter
                     view = new EmptyCell(context);
                     break;
                 case 2:
-                    view = new StickerSetNameCell(context, false);
+                    view = new StickerSetNameCell(context, false, resourcesProvider);
                     break;
                 case 4:
                     view = new View(context);
@@ -1506,7 +1505,7 @@ public class StickerMasksAlert extends BottomSheet implements NotificationCenter
                 case 0: {
                     TLRPC.Document sticker = (TLRPC.Document) cache.get(position);
                     StickerEmojiCell cell = (StickerEmojiCell) holder.itemView;
-                    cell.setSticker(sticker, cacheParent.get(position), positionToEmoji.get(position), false);
+                    cell.setSticker(sticker, null, cacheParent.get(position), positionToEmoji.get(position), false);
                     cell.setRecent(recentStickers[currentType].contains(sticker) || favouriteStickers.contains(sticker));
                     break;
                 }

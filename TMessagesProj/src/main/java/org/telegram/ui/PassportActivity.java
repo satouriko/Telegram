@@ -74,7 +74,6 @@ import org.telegram.messenger.DownloadController;
 import org.telegram.messenger.FileLoader;
 import org.telegram.messenger.FileLog;
 import org.telegram.messenger.ImageLoader;
-import org.telegram.messenger.ImageLocation;
 import org.telegram.messenger.LocaleController;
 import org.telegram.messenger.MediaController;
 import org.telegram.messenger.MessageObject;
@@ -193,7 +192,7 @@ public class PassportActivity extends BaseFragment implements NotificationCenter
 
     private String initialValues;
     private int currentActivityType;
-    private int currentBotId;
+    private long currentBotId;
     private String currentPayload;
     private String currentNonce;
     private boolean useCurrentValue;
@@ -667,7 +666,7 @@ public class PassportActivity extends BaseFragment implements NotificationCenter
         }
     }
 
-    public PassportActivity(int type, int botId, String scope, String publicKey, String payload, String nonce, String callbackUrl, TLRPC.TL_account_authorizationForm form, TLRPC.TL_account_password accountPassword) {
+    public PassportActivity(int type, long botId, String scope, String publicKey, String payload, String nonce, String callbackUrl, TLRPC.TL_account_authorizationForm form, TLRPC.TL_account_password accountPassword) {
         this(type, form, accountPassword, null, null, null, null, null, null);
         currentBotId = botId;
         currentPayload = payload;
@@ -928,8 +927,8 @@ public class PassportActivity extends BaseFragment implements NotificationCenter
 
     @Override
     public boolean onFragmentCreate() {
-        NotificationCenter.getInstance(currentAccount).addObserver(this, NotificationCenter.FileDidUpload);
-        NotificationCenter.getInstance(currentAccount).addObserver(this, NotificationCenter.FileDidFailUpload);
+        NotificationCenter.getInstance(currentAccount).addObserver(this, NotificationCenter.fileUploaded);
+        NotificationCenter.getInstance(currentAccount).addObserver(this, NotificationCenter.fileUploadFailed);
         NotificationCenter.getInstance(currentAccount).addObserver(this, NotificationCenter.twoStepPasswordChanged);
         NotificationCenter.getInstance(currentAccount).addObserver(this, NotificationCenter.didRemoveTwoStepPassword);
         return super.onFragmentCreate();
@@ -938,8 +937,8 @@ public class PassportActivity extends BaseFragment implements NotificationCenter
     @Override
     public void onFragmentDestroy() {
         super.onFragmentDestroy();
-        NotificationCenter.getInstance(currentAccount).removeObserver(this, NotificationCenter.FileDidUpload);
-        NotificationCenter.getInstance(currentAccount).removeObserver(this, NotificationCenter.FileDidFailUpload);
+        NotificationCenter.getInstance(currentAccount).removeObserver(this, NotificationCenter.fileUploaded);
+        NotificationCenter.getInstance(currentAccount).removeObserver(this, NotificationCenter.fileUploadFailed);
         NotificationCenter.getInstance(currentAccount).removeObserver(this, NotificationCenter.twoStepPasswordChanged);
         NotificationCenter.getInstance(currentAccount).removeObserver(this, NotificationCenter.didRemoveTwoStepPassword);
         callCallback(false);
@@ -1526,7 +1525,7 @@ public class PassportActivity extends BaseFragment implements NotificationCenter
         passwordAvatarContainer.addView(avatarImageView, LayoutHelper.createFrame(64, 64, Gravity.CENTER, 0, 8, 0, 0));
 
         AvatarDrawable avatarDrawable = new AvatarDrawable(botUser);
-        avatarImageView.setImage(ImageLocation.getForUser(botUser, false), "50_50", avatarDrawable, botUser);
+        avatarImageView.setForUserOrChat(botUser, avatarDrawable);
 
         passwordRequestTextView = new TextInfoPrivacyCell(context);
         passwordRequestTextView.getTextView().setGravity(Gravity.CENTER_HORIZONTAL);
@@ -2001,7 +2000,7 @@ public class PassportActivity extends BaseFragment implements NotificationCenter
             avatarContainer.addView(avatarImageView, LayoutHelper.createFrame(64, 64, Gravity.CENTER, 0, 8, 0, 0));
 
             AvatarDrawable avatarDrawable = new AvatarDrawable(botUser);
-            avatarImageView.setImage(ImageLocation.getForUser(botUser, false), "50_50", avatarDrawable, botUser);
+            avatarImageView.setForUserOrChat(botUser, avatarDrawable);
 
             bottomCell = new TextInfoPrivacyCell(context);
             bottomCell.setBackgroundDrawable(Theme.getThemedDrawable(context, R.drawable.greydivider_top, Theme.key_windowBackgroundGrayShadow));
@@ -2861,12 +2860,12 @@ public class PassportActivity extends BaseFragment implements NotificationCenter
                     }
                     if (event.getAction() == MotionEvent.ACTION_UP) {
                         CountrySelectActivity fragment = new CountrySelectActivity(false);
-                        fragment.setCountrySelectActivityDelegate((name, shortName) -> {
-                            inputFields[FIELD_PHONECOUNTRY].setText(name);
-                            int index = countriesArray.indexOf(name);
+                        fragment.setCountrySelectActivityDelegate(country -> {
+                            inputFields[FIELD_PHONECOUNTRY].setText(country.name);
+                            int index = countriesArray.indexOf(country.name);
                             if (index != -1) {
                                 ignoreOnTextChange = true;
-                                String code = countriesMap.get(name);
+                                String code = countriesMap.get(country.name);
                                 inputFields[FIELD_PHONECODE].setText(code);
                                 String hint = phoneFormatMap.get(code);
                                 inputFields[FIELD_PHONE].setHintText(hint != null ? hint.replace('X', '–') : null);
@@ -3356,9 +3355,9 @@ public class PassportActivity extends BaseFragment implements NotificationCenter
                     }
                     if (event.getAction() == MotionEvent.ACTION_UP) {
                         CountrySelectActivity fragment = new CountrySelectActivity(false);
-                        fragment.setCountrySelectActivityDelegate((name, shortName) -> {
-                            inputFields[FIELD_COUNTRY].setText(name);
-                            currentCitizeship = shortName;
+                        fragment.setCountrySelectActivityDelegate((country) -> {
+                            inputFields[FIELD_COUNTRY].setText(country.name);
+                            currentCitizeship = country.shortname;
                         });
                         presentFragment(fragment);
                     }
@@ -3695,7 +3694,7 @@ public class PassportActivity extends BaseFragment implements NotificationCenter
                     for (int a = 0, size = translationDocuments.size(); a < size; a++) {
                         SecureDocument document = translationDocuments.get(a);
                         String key = "translation" + getDocumentHash(document);
-                        if (key != null && errorsValues.containsKey(key)) {
+                        if (errorsValues.containsKey(key)) {
                             onFieldError(documentsCells.get(document));
                             return true;
                         }
@@ -4151,15 +4150,15 @@ public class PassportActivity extends BaseFragment implements NotificationCenter
                     }
                     if (event.getAction() == MotionEvent.ACTION_UP) {
                         CountrySelectActivity fragment = new CountrySelectActivity(false);
-                        fragment.setCountrySelectActivityDelegate((name, shortName) -> {
+                        fragment.setCountrySelectActivityDelegate((country) -> {
                             int field12 = (Integer) v.getTag();
                             final EditTextBoldCursor editText = inputFields[field12];
                             if (field12 == FIELD_CITIZENSHIP) {
-                                currentCitizeship = shortName;
+                                currentCitizeship = country.shortname;
                             } else {
-                                currentResidence = shortName;
+                                currentResidence = country.shortname;
                             }
-                            editText.setText(name);
+                            editText.setText(country.name);
                         });
                         presentFragment(fragment);
                     }
@@ -4873,7 +4872,19 @@ public class PassportActivity extends BaseFragment implements NotificationCenter
             }
             SecureDocument document1 = (SecureDocument) v.getTag();
             PhotoViewer.getInstance().setParentActivity(getParentActivity());
-            if (type == UPLOADING_TYPE_DOCUMENTS) {
+            if (type == UPLOADING_TYPE_SELFIE) {
+                ArrayList<SecureDocument> arrayList = new ArrayList<>();
+                arrayList.add(selfieDocument);
+                PhotoViewer.getInstance().openPhoto(arrayList, 0, provider);
+            } else if (type == UPLOADING_TYPE_FRONT) {
+                ArrayList<SecureDocument> arrayList = new ArrayList<>();
+                arrayList.add(frontDocument);
+                PhotoViewer.getInstance().openPhoto(arrayList, 0, provider);
+            } else if (type == UPLOADING_TYPE_REVERSE) {
+                ArrayList<SecureDocument> arrayList = new ArrayList<>();
+                arrayList.add(reverseDocument);
+                PhotoViewer.getInstance().openPhoto(arrayList, 0, provider);
+            } else if (type == UPLOADING_TYPE_DOCUMENTS) {
                 PhotoViewer.getInstance().openPhoto(documents, documents.indexOf(document1), provider);
             } else {
                 PhotoViewer.getInstance().openPhoto(translationDocuments, translationDocuments.indexOf(document1), provider);
@@ -4922,7 +4933,7 @@ public class PassportActivity extends BaseFragment implements NotificationCenter
                         doneItem.setEnabled(true);
                         doneItem.setAlpha(1.0f);
                     }
-                    FileLoader.getInstance(currentAccount).cancelUploadFile(document.path, false);
+                    FileLoader.getInstance(currentAccount).cancelFileUpload(document.path, false);
                 }
             });
             showDialog(builder.create());
@@ -6478,7 +6489,7 @@ public class PassportActivity extends BaseFragment implements NotificationCenter
 
     @Override
     public void didReceivedNotification(int id, int account, Object... args) {
-        if (id == NotificationCenter.FileDidUpload) {
+        if (id == NotificationCenter.fileUploaded) {
             final String location = (String) args[0];
             SecureDocument document = uploadingDocuments.get(location);
             if (document != null) {
@@ -6512,7 +6523,7 @@ public class PassportActivity extends BaseFragment implements NotificationCenter
                     errorsValues.remove("translation_all");
                 }
             }
-        } else if (id == NotificationCenter.FileDidFailUpload) {
+        } else if (id == NotificationCenter.fileUploadFailed) {
 
         } else if (id == NotificationCenter.twoStepPasswordChanged) {
             if (args != null && args.length > 0) {
@@ -6814,11 +6825,11 @@ public class PassportActivity extends BaseFragment implements NotificationCenter
             return;
         }
         if (chatAttachAlert == null) {
-            chatAttachAlert = new ChatAttachAlert(getParentActivity(), this);
+            chatAttachAlert = new ChatAttachAlert(getParentActivity(), this, false, false);
             chatAttachAlert.setDelegate(new ChatAttachAlert.ChatAttachViewDelegate() {
 
                 @Override
-                public void didPressedButton(int button, boolean arg, boolean notify, int scheduleDate) {
+                public void didPressedButton(int button, boolean arg, boolean notify, int scheduleDate, boolean forceDocument) {
                     if (getParentActivity() == null || chatAttachAlert == null) {
                         return;
                     }
@@ -7372,9 +7383,9 @@ public class PassportActivity extends BaseFragment implements NotificationCenter
                         PackageInfo pInfo = ApplicationLoader.applicationContext.getPackageManager().getPackageInfo(ApplicationLoader.applicationContext.getPackageName(), 0);
                         String version = String.format(Locale.US, "%s (%d)", pInfo.versionName, pInfo.versionCode);
 
-                        Intent mailer = new Intent(Intent.ACTION_SEND);
-                        mailer.setType("message/rfc822");
-                        mailer.putExtra(Intent.EXTRA_EMAIL, new String[]{"sms@stel.com"});
+                        Intent mailer = new Intent(Intent.ACTION_SENDTO);
+                        mailer.setData(Uri.parse("mailto:"));
+                        mailer.putExtra(Intent.EXTRA_EMAIL, new String[]{"reports@stel.com"});
                         mailer.putExtra(Intent.EXTRA_SUBJECT, "Android registration/login issue " + version + " " + phone);
                         mailer.putExtra(Intent.EXTRA_TEXT, "Phone: " + phone + "\nApp version: " + version + "\nOS version: SDK " + Build.VERSION.SDK_INT + "\nDevice Name: " + Build.MANUFACTURER + Build.MODEL + "\nLocale: " + Locale.getDefault() + "\nError: " + lastError);
                         getContext().startActivity(Intent.createChooser(mailer, "Send email..."));

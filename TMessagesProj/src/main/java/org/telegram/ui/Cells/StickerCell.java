@@ -23,6 +23,7 @@ import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.DocumentObject;
 import org.telegram.messenger.FileLoader;
 import org.telegram.messenger.ImageLocation;
+import org.telegram.messenger.ImageReceiver;
 import org.telegram.messenger.LocaleController;
 import org.telegram.messenger.MessageObject;
 import org.telegram.messenger.R;
@@ -76,7 +77,7 @@ public class StickerCell extends FrameLayout {
         return clearsInputField;
     }
 
-    public void setSticker(TLRPC.Document document, Object parent, int side) {
+    public void setSticker(TLRPC.Document document, Object parent) {
         parentObject = parent;
         if (document != null) {
             TLRPC.PhotoSize thumb = FileLoader.getClosestPhotoSizeWithSize(document.thumbs, 90);
@@ -102,19 +103,6 @@ public class StickerCell extends FrameLayout {
             }
         }
         sticker = document;
-        if (side == -1) {
-            setBackgroundResource(R.drawable.stickers_back_left);
-            setPadding(AndroidUtilities.dp(7), 0, 0, 0);
-        } else if (side == 0) {
-            setBackgroundResource(R.drawable.stickers_back_center);
-            setPadding(0, 0, 0, 0);
-        } else if (side == 1) {
-            setBackgroundResource(R.drawable.stickers_back_right);
-            setPadding(0, 0, AndroidUtilities.dp(7), 0);
-        } else if (side == 2) {
-            setBackgroundResource(R.drawable.stickers_back_all);
-            setPadding(AndroidUtilities.dp(3), 0, AndroidUtilities.dp(3), 0);
-        }
         Drawable background = getBackground();
         if (background != null) {
             background.setAlpha(230);
@@ -138,6 +126,21 @@ public class StickerCell extends FrameLayout {
 
     public boolean showingBitmap() {
         return imageView.getImageReceiver().getBitmap() != null;
+    }
+
+    public MessageObject.SendAnimationData getSendAnimationData() {
+        ImageReceiver imageReceiver = imageView.getImageReceiver();
+        if (!imageReceiver.hasNotThumb()) {
+            return null;
+        }
+        MessageObject.SendAnimationData data = new MessageObject.SendAnimationData();
+        int[] position = new int[2];
+        imageView.getLocationInWindow(position);
+        data.x = imageReceiver.getCenterX() + position[0];
+        data.y = imageReceiver.getCenterY() + position[1];
+        data.width = imageReceiver.getImageWidth();
+        data.height = imageReceiver.getImageHeight();
+        return data;
     }
 
     @Override

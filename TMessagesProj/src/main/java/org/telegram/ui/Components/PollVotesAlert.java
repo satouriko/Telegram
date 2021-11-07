@@ -40,9 +40,7 @@ import android.widget.FrameLayout;
 import android.widget.TextView;
 
 import org.telegram.messenger.AndroidUtilities;
-import org.telegram.messenger.ChatObject;
 import org.telegram.messenger.Emoji;
-import org.telegram.messenger.ImageLocation;
 import org.telegram.messenger.LocaleController;
 import org.telegram.messenger.MessageObject;
 import org.telegram.messenger.MessagesController;
@@ -375,7 +373,7 @@ public class PollVotesAlert extends BottomSheet {
 
             lastAvatar = photo;
             if (currentUser != null) {
-                avatarImageView.setImage(ImageLocation.getForUser(currentUser, false), "50_50", avatarDrawable, currentUser);
+                avatarImageView.setForUserOrChat(currentUser, avatarDrawable);
             } else {
                 avatarImageView.setImageDrawable(avatarDrawable);
             }
@@ -449,21 +447,7 @@ public class PollVotesAlert extends BottomSheet {
         TLRPC.TL_messageMediaPoll mediaPoll = (TLRPC.TL_messageMediaPoll) messageObject.messageOwner.media;
         poll = mediaPoll.poll;
         Context context = parentFragment.getParentActivity();
-
-        TLRPC.Chat chat = parentFragment.getCurrentChat();
-        TLRPC.User user = parentFragment.getCurrentUser();
-        if (ChatObject.isChannel(chat)) {
-            peer = new TLRPC.TL_inputPeerChannel();
-            peer.channel_id = chat.id;
-            peer.access_hash = chat.access_hash;
-        } else if (chat != null) {
-            peer = new TLRPC.TL_inputPeerChat();
-            peer.chat_id = chat.id;
-        } else {
-            peer = new TLRPC.TL_inputPeerUser();
-            peer.user_id = user.id;
-            peer.access_hash = user.access_hash;
-        }
+        peer = parentFragment.getMessagesController().getInputPeer((int) message.getDialogId());
 
         ArrayList<VotesList> loadedVoters = new ArrayList<>();
         int count = mediaPoll.results.results.size();
@@ -806,7 +790,7 @@ public class PollVotesAlert extends BottomSheet {
                 }
                 TLRPC.User currentUser = parentFragment.getCurrentUser();
                 Bundle args = new Bundle();
-                args.putInt("user_id", userCell.currentUser.id);
+                args.putLong("user_id", userCell.currentUser.id);
                 dismiss();
                 ProfileActivity fragment = new ProfileActivity(args);
                 fragment.setPlayProfileAnimation(currentUser != null && currentUser.id == userCell.currentUser.id ? 1 : 0);
@@ -1033,7 +1017,7 @@ public class PollVotesAlert extends BottomSheet {
         }
 
         @Override
-        public boolean isEnabled(int section, int row) {
+        public boolean isEnabled(RecyclerView.ViewHolder holder, int section, int row) {
             if (section == 0 || row == 0 || queries != null && !queries.isEmpty()) {
                 return false;
             }
@@ -1204,8 +1188,9 @@ public class PollVotesAlert extends BottomSheet {
         }
 
         @Override
-        public int getPositionForScrollProgress(float progress) {
-            return 0;
+        public void getPositionForScrollProgress(RecyclerListView listView, float progress, int[] position) {
+            position[0] = 0;
+            position[1] = 0;
         }
     }
 

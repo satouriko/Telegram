@@ -12,10 +12,14 @@
 namespace rtc {
 template <typename VideoFrameT>
 class VideoSinkInterface;
+template <class T>
+class scoped_refptr;
 } // namespace rtc
 
 namespace webrtc {
 class VideoFrame;
+class AudioDeviceModule;
+class TaskQueueFactory;
 } // namespace webrtc
 
 namespace tgcalls {
@@ -187,6 +191,8 @@ public:
 	virtual void setInputVolume(float level) = 0;
 	virtual void setOutputVolume(float level) = 0;
 	virtual void setAudioOutputDuckingEnabled(bool enabled) = 0;
+    virtual void addExternalAudioSamples(std::vector<uint8_t> &&samples) {
+    }
 
     virtual void setIsLowBatteryLevel(bool isLowBatteryLevel) = 0;
 
@@ -198,6 +204,7 @@ public:
 
 	virtual void receiveSignalingData(const std::vector<uint8_t> &data) = 0;
 	virtual void setVideoCapture(std::shared_ptr<VideoCaptureInterface> videoCapture) = 0;
+	virtual void sendVideoDeviceUpdated() = 0;
     virtual void setRequestedVideoAspect(float aspect) = 0;
 
 	virtual void stop(std::function<void(FinalState)> completion) = 0;
@@ -224,7 +231,9 @@ struct Descriptor {
 	std::function<void(AudioState, VideoState)> remoteMediaStateUpdated;
     std::function<void(float)> remotePrefferedAspectRatioUpdated;
 	std::function<void(const std::vector<uint8_t> &)> signalingDataEmitted;
-    std::shared_ptr<PlatformContext> platformContext;
+	std::function<rtc::scoped_refptr<webrtc::AudioDeviceModule>(webrtc::TaskQueueFactory*)> createAudioDeviceModule;
+
+	std::shared_ptr<PlatformContext> platformContext;
 };
 
 class Meta {

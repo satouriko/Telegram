@@ -14,6 +14,7 @@ import android.content.SharedPreferences;
 import android.content.pm.ActivityInfo;
 import android.database.DataSetObserver;
 import android.graphics.Bitmap;
+import android.graphics.Canvas;
 import android.graphics.Shader;
 import android.graphics.SurfaceTexture;
 import android.graphics.drawable.BitmapDrawable;
@@ -51,6 +52,8 @@ import org.telegram.tgnet.TLRPC;
 import org.telegram.ui.ActionBar.Theme;
 import org.telegram.ui.Components.BottomPagesView;
 import org.telegram.ui.Components.LayoutHelper;
+import org.telegram.ui.Components.SizeNotifierFrameLayout;
+import org.telegram.ui.Components.voip.CellFlickerDrawable;
 
 import javax.microedition.khronos.egl.EGL10;
 import javax.microedition.khronos.egl.EGLConfig;
@@ -217,15 +220,41 @@ public class IntroActivity extends Activity implements NotificationCenter.Notifi
             }
         });
 
-        startMessagingButton = new TextView(this);
+        startMessagingButton = new TextView(this) {
+            CellFlickerDrawable cellFlickerDrawable;
+
+            @Override
+            protected void onDraw(Canvas canvas) {
+                super.onDraw(canvas);
+                if (cellFlickerDrawable == null) {
+                    cellFlickerDrawable = new CellFlickerDrawable();
+                    cellFlickerDrawable.drawFrame = false;
+                    cellFlickerDrawable.repeatProgress = 2f;
+                }
+                cellFlickerDrawable.setParentWidth(getMeasuredWidth());
+                AndroidUtilities.rectTmp.set(0, 0, getMeasuredWidth(), getMeasuredHeight());
+                cellFlickerDrawable.draw(canvas, AndroidUtilities.rectTmp, AndroidUtilities.dp(4));
+                invalidate();
+            }
+
+            @Override
+            protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
+                int size = MeasureSpec.getSize(widthMeasureSpec);
+                if (size > AndroidUtilities.dp(260)) {
+                    super.onMeasure(MeasureSpec.makeMeasureSpec(AndroidUtilities.dp(320), MeasureSpec.EXACTLY), heightMeasureSpec);
+                } else {
+                    super.onMeasure(widthMeasureSpec, heightMeasureSpec);
+                }
+            }
+        };
         startMessagingButton.setText(LocaleController.getString("StartMessaging", R.string.StartMessaging));
         startMessagingButton.setGravity(Gravity.CENTER);
         startMessagingButton.setTextColor(0xffffffff);
         startMessagingButton.setTypeface(AndroidUtilities.getTypeface("fonts/rmedium.ttf"));
-        startMessagingButton.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 14);
+        startMessagingButton.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 15);
         startMessagingButton.setBackgroundDrawable(Theme.createSimpleSelectorRoundRectDrawable(AndroidUtilities.dp(4), 0xff50a8eb, 0xff439bde));
         startMessagingButton.setPadding(AndroidUtilities.dp(34), 0, AndroidUtilities.dp(34), 0);
-        frameLayout.addView(startMessagingButton, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, 42, Gravity.CENTER_HORIZONTAL | Gravity.BOTTOM, 10, 0, 10, 76));
+        frameLayout.addView(startMessagingButton, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, 42, Gravity.CENTER_HORIZONTAL | Gravity.BOTTOM, 36, 0, 36, 76));
         startMessagingButton.setOnClickListener(view -> {
             if (startPressed) {
                 return;
@@ -237,12 +266,6 @@ public class IntroActivity extends Activity implements NotificationCenter.Notifi
             destroyed = true;
             finish();
         });
-        if (BuildVars.DEBUG_PRIVATE_VERSION) {
-            startMessagingButton.setOnLongClickListener(v -> {
-                ConnectionsManager.getInstance(currentAccount).switchBackend();
-                return true;
-            });
-        }
 
         bottomPages = new BottomPagesView(this, viewPager, 6);
         frameLayout.addView(bottomPages, LayoutHelper.createFrame(66, 5, Gravity.TOP | Gravity.CENTER_HORIZONTAL, 0, 350, 0, 0));
@@ -269,11 +292,15 @@ public class IntroActivity extends Activity implements NotificationCenter.Notifi
             FrameLayout frameLayout3 = new FrameLayout(this);
             setContentView(frameLayout3);
 
-            View imageView = new ImageView(this);
-            BitmapDrawable drawable = (BitmapDrawable) getResources().getDrawable(R.drawable.catstile);
-            drawable.setTileModeXY(Shader.TileMode.REPEAT, Shader.TileMode.REPEAT);
-            imageView.setBackgroundDrawable(drawable);
-            frameLayout3.addView(imageView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
+            SizeNotifierFrameLayout backgroundTablet = new SizeNotifierFrameLayout(this) {
+                @Override
+                protected boolean isActionBarVisible() {
+                    return false;
+                }
+            };
+            backgroundTablet.setOccupyStatusBar(false);
+            backgroundTablet.setBackgroundImage(Theme.getCachedWallpaper(), Theme.isWallpaperMotion());
+            frameLayout3.addView(backgroundTablet, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
 
             FrameLayout frameLayout4 = new FrameLayout(this);
             frameLayout4.setBackgroundResource(R.drawable.btnshadow);

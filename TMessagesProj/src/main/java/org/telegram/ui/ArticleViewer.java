@@ -47,7 +47,6 @@ import android.text.TextUtils;
 import android.text.TextWatcher;
 import android.text.style.MetricAffectingSpan;
 import android.text.style.URLSpan;
-import android.util.LongSparseArray;
 import android.util.Property;
 import android.util.SparseArray;
 import android.util.TypedValue;
@@ -86,6 +85,7 @@ import android.widget.Toast;
 
 import androidx.annotation.Keep;
 import androidx.annotation.NonNull;
+import androidx.collection.LongSparseArray;
 import androidx.recyclerview.widget.DefaultItemAnimator;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.GridLayoutManagerFixed;
@@ -135,6 +135,7 @@ import org.telegram.ui.Components.AnchorSpan;
 import org.telegram.ui.Components.AnimatedArrowDrawable;
 import org.telegram.ui.Components.AnimationProperties;
 import org.telegram.ui.Components.AvatarDrawable;
+import org.telegram.ui.Components.BulletinFactory;
 import org.telegram.ui.Components.CloseProgressDrawable2;
 import org.telegram.ui.Components.CombinedDrawable;
 import org.telegram.ui.Components.ContextProgressView;
@@ -288,6 +289,8 @@ public class ArticleViewer implements NotificationCenter.NotificationCenterDeleg
 
     TextSelectionHelper.ArticleTextSelectionHelper textSelectionHelper;
     TextSelectionHelper.ArticleTextSelectionHelper textSelectionHelperBottomSheet;
+
+    PinchToZoomHelper pinchToZoomHelper;
 
     private int allowAnimationIndex = -1;
 
@@ -623,6 +626,8 @@ public class ArticleViewer implements NotificationCenter.NotificationCenterDeleg
         }
     };
 
+    private boolean closeAnimationInProgress;
+
     private class WindowView extends FrameLayout {
 
         private final Paint blackPaint = new Paint();
@@ -637,7 +642,6 @@ public class ArticleViewer implements NotificationCenter.NotificationCenterDeleg
         private int startedTrackingX;
         private int startedTrackingY;
         private VelocityTracker tracker;
-        private boolean closeAnimationInProgress;
         private float innerTranslationX;
         private float alpha;
 
@@ -706,6 +710,10 @@ public class ArticleViewer implements NotificationCenter.NotificationCenterDeleg
 
         @Override
         public boolean dispatchTouchEvent(MotionEvent ev) {
+            if (pinchToZoomHelper.isInOverlayMode()) {
+                ev.offsetLocation(-containerView.getX(), -containerView.getY());
+                return pinchToZoomHelper.onTouchEvent(ev);
+            }
             TextSelectionHelper.TextSelectionOverlay selectionOverlay = textSelectionHelper.getOverlayView(getContext());
             MotionEvent textSelectionEv = MotionEvent.obtain(ev);
             textSelectionEv.offsetLocation(-containerView.getX(), -containerView.getY());
@@ -1244,7 +1252,7 @@ public class ArticleViewer implements NotificationCenter.NotificationCenterDeleg
                     popupWindow.dismiss();
                 }
             });
-            popupLayout.setShowedFromBotton(false);
+            popupLayout.setShownFromBotton(false);
 
             deleteView = new TextView(parentActivity);
             deleteView.setBackgroundDrawable(Theme.createSelectorDrawable(Theme.getColor(Theme.key_listSelector), 2));
@@ -3651,11 +3659,27 @@ public class ArticleViewer implements NotificationCenter.NotificationCenterDeleg
 
             @Override
             public void onTextCopied() {
-
+                BulletinFactory.of(containerView, null).createCopyBulletin(LocaleController.getString("TextCopied", R.string.TextCopied)).show();
             }
         });
         containerView.addView(textSelectionHelper.getOverlayView(activity));
 
+        pinchToZoomHelper = new PinchToZoomHelper(containerView, windowView);
+        pinchToZoomHelper.setClipBoundsListener(new PinchToZoomHelper.ClipBoundsListener() {
+            @Override
+            public void getClipTopBottom(float[] topBottom) {
+                topBottom[0] = currentHeaderHeight;
+                topBottom[1] = listView[0].getMeasuredHeight();
+            }
+        });
+        pinchToZoomHelper.setCallback(new PinchToZoomHelper.Callback() {
+            @Override
+            public void onZoomStarted(MessageObject messageObject) {
+                if (listView[0] != null) {
+                    listView[0].cancelClickRunnables(true);
+                }
+            }
+        });
         updatePaintColors();
     }
 
@@ -3965,6 +3989,9 @@ public class ArticleViewer implements NotificationCenter.NotificationCenterDeleg
         }
 
         float heightDiff = maxHeight - minHeight;
+        if (heightDiff == 0) {
+            heightDiff = 1;
+        }
 
         currentHeaderHeight = newHeight;
         float scale = 0.8f + (currentHeaderHeight - minHeight) / heightDiff * 0.2f;
@@ -3997,7 +4024,7 @@ public class ArticleViewer implements NotificationCenter.NotificationCenterDeleg
             return;
         }
         Bundle args = new Bundle();
-        args.putInt("user_id", user.id);
+        args.putLong("user_id", user.id);
         args.putString("botUser", "webpage" + wid);
         ((LaunchActivity) parentActivity).presentFragment(new ChatActivity(args), false, true);
         close(false, true);
@@ -4465,7 +4492,7 @@ public class ArticleViewer implements NotificationCenter.NotificationCenterDeleg
     }
 
     public void close(boolean byBackPress, boolean force) {
-        if (parentActivity == null || !isVisible || checkAnimation()) {
+        if (parentActivity == null || closeAnimationInProgress || !isVisible || checkAnimation()) {
             return;
         }
         if (fullscreenVideoContainer.getVisibility() == View.VISIBLE) {
@@ -4644,7 +4671,7 @@ public class ArticleViewer implements NotificationCenter.NotificationCenterDeleg
             }
             AndroidUtilities.runOnUIThread(() -> cell.setState(2, false));
             AndroidUtilities.runOnUIThread(() -> MessagesController.getInstance(currentAccount).loadFullChat(channel.id, 0, true), 1000);
-            MessagesStorage.getInstance(currentAccount).updateDialogsWithDeletedMessages(new ArrayList<>(), null, true, channel.id);
+            MessagesStorage.getInstance(currentAccount).updateDialogsWithDeletedMessages(-channel.id, channel.id, new ArrayList<>(), null, true);
         });
     }
 
@@ -5948,6 +5975,9 @@ public class ArticleViewer implements NotificationCenter.NotificationCenterDeleg
 
         @Override
         public boolean onTouchEvent(MotionEvent event) {
+            if (pinchToZoomHelper.checkPinchToZoom(event, this, imageView, null)) {
+                return true;
+            }
             float x = event.getX();
             float y = event.getY();
             if (channelCell.getVisibility() == VISIBLE && y > channelCell.getTranslationY() && y < channelCell.getTranslationY() + AndroidUtilities.dp(39)) {
@@ -6114,9 +6144,11 @@ public class ArticleViewer implements NotificationCenter.NotificationCenterDeleg
             if (!imageView.hasBitmapImage() || imageView.getCurrentAlpha() != 1.0f) {
                 canvas.drawRect(imageView.getDrawRegion(), photoBackgroundPaint);
             }
-            imageView.draw(canvas);
-            if (imageView.getVisible()) {
-                radialProgress.draw(canvas);
+            if (!pinchToZoomHelper.isInOverlayModeFor(this)) {
+                imageView.draw(canvas);
+                if (imageView.getVisible()) {
+                    radialProgress.draw(canvas);
+                }
             }
             int count = 0;
             if (captionLayout != null) {
@@ -9827,6 +9859,9 @@ public class ArticleViewer implements NotificationCenter.NotificationCenterDeleg
 
         @Override
         public boolean onTouchEvent(MotionEvent event) {
+            if (pinchToZoomHelper.checkPinchToZoom(event, this, imageView, null)) {
+                return true;
+            }
             float x = event.getX();
             float y = event.getY();
             if (channelCell.getVisibility() == VISIBLE && y > channelCell.getTranslationY() && y < channelCell.getTranslationY() + AndroidUtilities.dp(39)) {
@@ -9988,9 +10023,11 @@ public class ArticleViewer implements NotificationCenter.NotificationCenterDeleg
             if (!imageView.hasBitmapImage() || imageView.getCurrentAlpha() != 1.0f) {
                 canvas.drawRect(imageView.getImageX(), imageView.getImageY(), imageView.getImageX2(), imageView.getImageY2(), photoBackgroundPaint);
             }
-            imageView.draw(canvas);
-            if (imageView.getVisible()) {
-                radialProgress.draw(canvas);
+            if (!pinchToZoomHelper.isInOverlayModeFor(this)) {
+                imageView.draw(canvas);
+                if (imageView.getVisible()) {
+                    radialProgress.draw(canvas);
+                }
             }
             if (!TextUtils.isEmpty(currentBlock.url)) {
                 int x = getMeasuredWidth() - AndroidUtilities.dp(11 + 24);

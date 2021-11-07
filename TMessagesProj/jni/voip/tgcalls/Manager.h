@@ -29,6 +29,7 @@ public:
 	void start();
 	void receiveSignalingData(const std::vector<uint8_t> &data);
 	void setVideoCapture(std::shared_ptr<VideoCaptureInterface> videoCapture);
+    void sendVideoDeviceUpdated();
     void setRequestedVideoAspect(float aspect);
     void setMuteOutgoingAudio(bool mute);
 	void setIncomingVideoOutput(std::shared_ptr<rtc::VideoSinkInterface<webrtc::VideoFrame>> sink);
@@ -41,6 +42,8 @@ public:
 	void setAudioOutputDevice(std::string id);
 	void setInputVolume(float level);
 	void setOutputVolume(float level);
+
+    void addExternalAudioSamples(std::vector<uint8_t> &&samples);
 
 private:
 	void sendSignalingAsync(int delayMs, int cause);
@@ -67,6 +70,7 @@ private:
 	std::function<void(const std::vector<uint8_t> &)> _signalingDataEmitted;
     std::function<void(int)> _signalBarsUpdated;
     std::function<void(float)> _audioLevelUpdated;
+	std::function<rtc::scoped_refptr<webrtc::AudioDeviceModule>(webrtc::TaskQueueFactory*)> _createAudioDeviceModule;
 	std::function<uint32_t(const Message &)> _sendSignalingMessage;
 	std::function<void(Message&&)> _sendTransportMessage;
 	std::unique_ptr<ThreadLocalObject<NetworkManager>> _networkManager;

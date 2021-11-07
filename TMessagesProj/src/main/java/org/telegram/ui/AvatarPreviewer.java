@@ -163,15 +163,15 @@ public class AvatarPreviewer {
     public static class Data {
 
         public static Data of(TLRPC.User user, int classGuid, MenuItem... menuItems) {
-            final ImageLocation imageLocation = ImageLocation.getForUser(user, true);
-            final ImageLocation thumbImageLocation = ImageLocation.getForUser(user, false);
+            final ImageLocation imageLocation = ImageLocation.getForUserOrChat(user, ImageLocation.TYPE_BIG);
+            final ImageLocation thumbImageLocation = ImageLocation.getForUserOrChat(user, ImageLocation.TYPE_SMALL);
             final String thumbFilter = thumbImageLocation != null && thumbImageLocation.photoSize instanceof TLRPC.TL_photoStrippedSize ? "b" : null;
             return new Data(imageLocation, thumbImageLocation, null, null, thumbFilter, null, null, user, menuItems, new UserInfoLoadTask(user, classGuid));
         }
 
         public static Data of(TLRPC.UserFull userFull, MenuItem... menuItems) {
-            final ImageLocation imageLocation = ImageLocation.getForUser(userFull.user, true);
-            final ImageLocation thumbImageLocation = ImageLocation.getForUser(userFull.user, false);
+            final ImageLocation imageLocation = ImageLocation.getForUserOrChat(userFull.user, ImageLocation.TYPE_BIG);
+            final ImageLocation thumbImageLocation = ImageLocation.getForUserOrChat(userFull.user, ImageLocation.TYPE_SMALL);
             final String thumbFilter = thumbImageLocation != null && thumbImageLocation.photoSize instanceof TLRPC.TL_photoStrippedSize ? "b" : null;
             final ImageLocation videoLocation;
             final String videoFileName;
@@ -188,15 +188,15 @@ public class AvatarPreviewer {
         }
 
         public static Data of(TLRPC.Chat chat, int classGuid, MenuItem... menuItems) {
-            final ImageLocation imageLocation = ImageLocation.getForChat(chat, true);
-            final ImageLocation thumbImageLocation = ImageLocation.getForChat(chat, false);
+            final ImageLocation imageLocation = ImageLocation.getForUserOrChat(chat, ImageLocation.TYPE_BIG);
+            final ImageLocation thumbImageLocation = ImageLocation.getForUserOrChat(chat, ImageLocation.TYPE_SMALL);
             final String thumbFilter = thumbImageLocation != null && thumbImageLocation.photoSize instanceof TLRPC.TL_photoStrippedSize ? "b" : null;
             return new Data(imageLocation, thumbImageLocation, null, null, thumbFilter, null, null, chat, menuItems, new ChatInfoLoadTask(chat, classGuid));
         }
 
         public static Data of(TLRPC.Chat chat, TLRPC.ChatFull chatFull, MenuItem... menuItems) {
-            final ImageLocation imageLocation = ImageLocation.getForChat(chat, true);
-            final ImageLocation thumbImageLocation = ImageLocation.getForChat(chat, false);
+            final ImageLocation imageLocation = ImageLocation.getForUserOrChat(chat, ImageLocation.TYPE_BIG);
+            final ImageLocation thumbImageLocation = ImageLocation.getForUserOrChat(chat, ImageLocation.TYPE_SMALL);
             final String thumbFilter = thumbImageLocation != null && thumbImageLocation.photoSize instanceof TLRPC.TL_photoStrippedSize ? "b" : null;
             final ImageLocation videoLocation;
             final String videoFileName;
@@ -250,7 +250,7 @@ public class AvatarPreviewer {
 
         @Override
         protected void onReceiveNotification(Object... args) {
-            Integer uid = (Integer) args[0];
+            Long uid = (Long) args[0];
             if (uid == argument.id) {
                 onResult((TLRPC.UserFull) args[1]);
             }
@@ -383,15 +383,15 @@ public class AvatarPreviewer {
         @Override
         protected void onAttachedToWindow() {
             super.onAttachedToWindow();
-            NotificationCenter.getInstance(UserConfig.selectedAccount).addObserver(this, NotificationCenter.fileDidLoad);
-            NotificationCenter.getInstance(UserConfig.selectedAccount).addObserver(this, NotificationCenter.FileLoadProgressChanged);
+            NotificationCenter.getInstance(UserConfig.selectedAccount).addObserver(this, NotificationCenter.fileLoaded);
+            NotificationCenter.getInstance(UserConfig.selectedAccount).addObserver(this, NotificationCenter.fileLoadProgressChanged);
         }
 
         @Override
         protected void onDetachedFromWindow() {
             super.onDetachedFromWindow();
-            NotificationCenter.getInstance(UserConfig.selectedAccount).removeObserver(this, NotificationCenter.fileDidLoad);
-            NotificationCenter.getInstance(UserConfig.selectedAccount).removeObserver(this, NotificationCenter.FileLoadProgressChanged);
+            NotificationCenter.getInstance(UserConfig.selectedAccount).removeObserver(this, NotificationCenter.fileLoaded);
+            NotificationCenter.getInstance(UserConfig.selectedAccount).removeObserver(this, NotificationCenter.fileLoadProgressChanged);
         }
 
         @Override
@@ -399,12 +399,12 @@ public class AvatarPreviewer {
             if (!showProgress || TextUtils.isEmpty(videoFileName)) {
                 return;
             }
-            if (id == NotificationCenter.fileDidLoad) {
+            if (id == NotificationCenter.fileLoaded) {
                 final String fileName = (String) args[0];
                 if (TextUtils.equals(fileName, videoFileName)) {
                     radialProgress.setProgress(1f, true);
                 }
-            } else if (id == NotificationCenter.FileLoadProgressChanged) {
+            } else if (id == NotificationCenter.fileLoadProgressChanged) {
                 String fileName = (String) args[0];
                 if (TextUtils.equals(fileName, videoFileName)) {
                     if (radialProgress != null) {

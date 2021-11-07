@@ -54,8 +54,8 @@ public class ViewPagerFixed extends FrameLayout {
 
     int currentPosition;
     int nextPosition;
-    private View viewPages[];
-    private int viewTypes[];
+    private View[] viewPages;
+    private int[] viewTypes;
 
     protected SparseArray<View> viewsByType = new SparseArray<>();
 
@@ -179,6 +179,10 @@ public class ViewPagerFixed extends FrameLayout {
                 v = adapter.createView(viewTypes[index]);
             } else {
                 viewsByType.remove(viewTypes[index]);
+            }
+            if (v.getParent() != null) {
+                ViewGroup parent = (ViewGroup) v.getParent();
+                parent.removeView(v);
             }
             addView(v);
             viewPages[index] = v;
@@ -941,11 +945,6 @@ public class ViewPagerFixed extends FrameLayout {
                     };
                     linearSmoothScroller.setTargetPosition(position);
                     startSmoothScroll(linearSmoothScroller);
-                }
-
-                @Override
-                public int scrollHorizontallyBy(int dx, RecyclerView.Recycler recycler, RecyclerView.State state) {
-                    return super.scrollHorizontallyBy(dx, recycler, state);
                 }
 
                 @Override

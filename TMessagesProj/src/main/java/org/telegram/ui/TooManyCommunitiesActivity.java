@@ -67,7 +67,7 @@ public class TooManyCommunitiesActivity extends BaseFragment {
 
     private int buttonAnimation;
 
-    private Set<Integer> selectedIds = new HashSet<>();
+    private Set<Long> selectedIds = new HashSet<>();
 
     private TooManyCommunitiesHintCell hintCell;
 
@@ -267,7 +267,7 @@ public class TooManyCommunitiesActivity extends BaseFragment {
             for (int i = 0; i < chats.size(); i++) {
                 TLRPC.Chat chat = chats.get(i);
                 getMessagesController().putChat(chat, false);
-                getMessagesController().deleteUserFromChat(chat.id, currentUser, null);
+                getMessagesController().deleteParticipantFromChat(chat.id, currentUser, null);
             }
             finishFragment();
         });
@@ -481,7 +481,7 @@ public class TooManyCommunitiesActivity extends BaseFragment {
                     break;
                 case 4:
                 default:
-                    view = new GroupCreateUserCell(parent.getContext(), true, 0, false);
+                    view = new GroupCreateUserCell(parent.getContext(), 1, 0, false);
                     break;
 
             }
@@ -547,7 +547,7 @@ public class TooManyCommunitiesActivity extends BaseFragment {
         @NonNull
         @Override
         public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-            return new RecyclerListView.Holder(new GroupCreateUserCell(parent.getContext(), true, 0, false));
+            return new RecyclerListView.Holder(new GroupCreateUserCell(parent.getContext(), 1, 0, false));
         }
 
         @Override

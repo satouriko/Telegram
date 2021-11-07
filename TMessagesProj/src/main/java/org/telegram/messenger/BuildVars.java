@@ -10,27 +10,43 @@ package org.telegram.messenger;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.os.Build;
 
 public class BuildVars {
 
     public static boolean DEBUG_VERSION = false;
-    public static boolean DEBUG_PRIVATE_VERSION = false;
     public static boolean LOGS_ENABLED = false;
+    public static boolean DEBUG_PRIVATE_VERSION = false;
     public static boolean USE_CLOUD_STRINGS = true;
     public static boolean CHECK_UPDATES = true;
-    public static int BUILD_VERSION = 2227;
-    public static String BUILD_VERSION_STRING = "7.4.0";
+    public static boolean NO_SCOPED_STORAGE = Build.VERSION.SDK_INT <= 29;
+    public static int BUILD_VERSION = 2463;
+    public static String BUILD_VERSION_STRING = "8.2.1";
     public static int APP_ID = 1056817; //obtain your own APP_ID at https://core.telegram.org/api/obtaining_api_id
     public static String APP_HASH = "31511ac2e6289df4bc7d33a880e99475"; //obtain your own APP_HASH at https://core.telegram.org/api/obtaining_api_id
-    public static String APPCENTER_HASH = "88d8adad-79c7-4ec4-910b-1232c6dec9e0";
-    public static String APPCENTER_HASH_DEBUG = "61fdf8d4-d901-4b12-8f6e-e5224ebdaad1";
     public static String SMS_HASH = ""; //https://developers.google.com/identity/sms-retriever/overview
     public static String PLAYSTORE_APP_URL = "";
 
     static {
         if (ApplicationLoader.applicationContext != null) {
             SharedPreferences sharedPreferences = ApplicationLoader.applicationContext.getSharedPreferences("systemConfig", Context.MODE_PRIVATE);
-            LOGS_ENABLED = sharedPreferences.getBoolean("logsEnabled", DEBUG_VERSION);
+            LOGS_ENABLED = DEBUG_VERSION || sharedPreferences.getBoolean("logsEnabled", DEBUG_VERSION);
         }
+    }
+
+    private static Boolean standaloneApp;
+    public static boolean isStandaloneApp() {
+        if (standaloneApp == null) {
+            standaloneApp = ApplicationLoader.applicationContext != null && "com.cool2645.nekolite.web".equals(ApplicationLoader.applicationContext.getPackageName());
+        }
+        return standaloneApp;
+    }
+
+    private static Boolean betaApp;
+    public static boolean isBetaApp() {
+        if (betaApp == null) {
+            betaApp = ApplicationLoader.applicationContext != null && "com.cool2645.nekolite.beta".equals(ApplicationLoader.applicationContext.getPackageName());
+        }
+        return betaApp;
     }
 }

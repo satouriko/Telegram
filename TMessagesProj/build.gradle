@@ -3,7 +3,6 @@ apply plugin: 'com.android.application'
 repositories {
     mavenCentral()
     google()
-    jcenter()
 }
 
 configurations {
@@ -16,40 +15,38 @@ configurations.all {
 }
 
 dependencies {
-    implementation 'androidx.core:core:1.3.2'
+    implementation 'androidx.core:core:1.6.0'
     implementation 'androidx.palette:palette:1.0.0'
-    implementation 'androidx.exifinterface:exifinterface:1.3.2'
+    implementation 'androidx.exifinterface:exifinterface:1.3.3'
     implementation 'androidx.dynamicanimation:dynamicanimation:1.0.0'
     implementation 'androidx.multidex:multidex:2.0.1'
     implementation "androidx.sharetarget:sharetarget:1.1.0"
 
     compileOnly 'org.checkerframework:checker-qual:2.5.2'
     compileOnly 'org.checkerframework:checker-compat-qual:2.5.0'
-    implementation 'com.google.firebase:firebase-messaging:21.0.1'
-    implementation 'com.google.firebase:firebase-config:20.0.2'
-    implementation 'com.google.firebase:firebase-datatransport:17.0.10'
-    implementation 'com.google.firebase:firebase-appindexing:19.1.0'
-    implementation 'com.google.android.gms:play-services-maps:17.0.0'
-    implementation 'com.google.android.gms:play-services-auth:19.0.0'
-    implementation 'com.google.android.gms:play-services-vision:16.2.0'
-    implementation 'com.google.android.gms:play-services-wearable:17.0.0'
-    implementation 'com.google.android.gms:play-services-location:17.1.0'
-    implementation 'com.google.android.gms:play-services-wallet:18.1.2'
-    implementation "com.microsoft.appcenter:appcenter-distribute:3.3.1"
-    implementation "com.microsoft.appcenter:appcenter-crashes:3.3.1"
+    implementation 'com.google.firebase:firebase-messaging:22.0.0'
+    implementation 'com.google.firebase:firebase-config:21.0.1'
+    implementation 'com.google.firebase:firebase-datatransport:18.1.0'
+    implementation 'com.google.firebase:firebase-appindexing:20.0.0'
+    implementation 'com.google.android.gms:play-services-maps:17.0.1'
+    implementation 'com.google.android.gms:play-services-auth:19.2.0'
+    implementation 'com.google.android.gms:play-services-vision:20.1.3'
+    implementation 'com.google.android.gms:play-services-wearable:17.1.0'
+    implementation 'com.google.android.gms:play-services-location:18.0.0'
+    implementation 'com.google.android.gms:play-services-wallet:18.1.3'
     implementation 'com.googlecode.mp4parser:isoparser:1.0.6'
     implementation 'com.stripe:stripe-android:2.0.2'
     implementation files('libs/libgsaverification-client.aar')
 
-    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:1.1.1'
+    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:1.1.5'
 }
 
-ext.abiCodes = ['armeabi-v7a': 3, 'arm64-v8a': 7, x86: 4, x86_64: 8, 'afat': 9]
+ext.abiCodes = ['armeabi-v7a': 1, 'arm64-v8a': 5, x86: 2, x86_64: 6, 'universal': 0]
 
 android {
-    compileSdkVersion 30
-    buildToolsVersion '30.0.3'
-    ndkVersion "21.1.6352462"
+    compileSdkVersion 31
+    buildToolsVersion '31.0.0'
+    ndkVersion "21.4.7075529"
 
     defaultConfig.applicationId = "com.cool2645.nekolite"
 
@@ -62,9 +59,20 @@ android {
     }
 
     lintOptions {
+        checkReleaseBuilds false
         disable 'MissingTranslation'
         disable 'ExtraTranslation'
         disable 'BlockedPrivateApi'
+    }
+
+    packagingOptions {
+        exclude 'META-INF/**'
+        exclude 'com/**'
+        exclude 'org/**'
+        exclude '**.properties'
+        exclude '**.bin'
+        exclude '**.lst'
+        exclude '**.txt'
     }
 
     dexOptions {
@@ -78,17 +86,18 @@ android {
         coreLibraryDesugaringEnabled true
     }
 
+    def keystorePwd = null
+    def alias = null
+    def pwd = null
+    if (project.rootProject.file('local.properties').exists()) {
+        Properties properties = new Properties()
+        properties.load(project.rootProject.file('local.properties').newDataInputStream())
+        keystorePwd = properties.getProperty("RELEASE_STORE_PASSWORD")
+        alias = properties.getProperty("RELEASE_KEY_ALIAS")
+        pwd = properties.getProperty("RELEASE_KEY_PASSWORD")
+    }
+
     signingConfigs {
-        def keystorePwd = null
-        def alias = null
-        def pwd = null
-        if (project.rootProject.file('local.properties').exists()) {
-            Properties properties = new Properties()
-            properties.load(project.rootProject.file('local.properties').newDataInputStream())
-            keystorePwd = properties.getProperty("RELEASE_STORE_PASSWORD")
-            alias = properties.getProperty("RELEASE_KEY_ALIAS")
-            pwd = properties.getProperty("RELEASE_KEY_PASSWORD")
-        }
         release {
             storeFile file("config/release.keystore")
             storePassword keystorePwd != null ? keystorePwd : System.getenv("KEYSTORE_PASS")
@@ -98,7 +107,6 @@ android {
         debug {
         }
     }
-
 
     buildTypes {
         debug {
@@ -118,13 +126,10 @@ android {
             jniDebuggable false
             signingConfig signingConfigs.release
             minifyEnabled true
-            shrinkResources false
+            shrinkResources true
             multiDexEnabled true
-            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
-            dependencies {
-                implementation 'com.android.support:multidex:1.0.3'
-            }
-            manifestPlaceholders = [applicationClassName: "MultiDexApplicationLoader"]
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            ndk.debugSymbolLevel = 'FULL'
         }
     }
 
@@ -134,16 +139,15 @@ android {
 
     sourceSets.release {
         manifest.srcFile 'config/release/AndroidManifest_SDK23.xml'
-        java.srcDirs = ['src/multidex/java']
     }
 
-    defaultConfig.versionCode = 2227
+    defaultConfig.versionCode = 2463
 
     applicationVariants.all { variant ->
         variant.outputs.all { output ->
-            def abi = output.getFilter(com.android.build.OutputFile.ABI)
-            if (abi == null) abi = 'afat'
-            outputFileName = "Nanogram-${defaultConfig.versionName}-${defaultConfig.versionCode}-${abi}-${buildType.name}.apk"
+            def abi = output.getFilter('ABI')
+            if (abi == null) abi = 'universal'
+            outputFileName = "Nanogram-${defaultConfig.versionName}-${defaultConfig.versionCode}-${abi}.apk"
             def abiVersionCode = project.ext.abiCodes.get(abi)
             output.versionCodeOverride = defaultConfig.versionCode * 10 + abiVersionCode
         }
@@ -151,8 +155,8 @@ android {
 
     defaultConfig {
         minSdkVersion 16
-        targetSdkVersion 29
-        versionName "7.4.2"
+        targetSdkVersion 30
+        versionName "8.2.1"
 
         vectorDrawables.generatedDensities = ['mdpi', 'hdpi', 'xhdpi', 'xxhdpi']
 
@@ -164,10 +168,29 @@ android {
         }
     }
 
+    bundle {
+        language {
+            enableSplit = false
+        }
+    }
+
     splits.abi {
         enable true
         universalApk true
     }
+}
+
+def patchBundleReleaseManifest = task('patchBundleReleaseManifest').doLast {
+    def manifest = Paths.get(project.buildDir.path, 'intermediates',
+            'bundle_manifest', 'release', 'AndroidManifest.xml')
+    def newManifest = manifest.getText()
+    newManifest = newManifest.replace("<uses-permission android:name=\"android.permission.ACCESS_BACKGROUND_LOCATION\" />", "")
+    newManifest = newManifest.replace("<uses-permission android:name=\"android.permission.READ_CALL_LOG\" />", "")
+    Files.write(manifest, newManifest.getBytes())
+}
+
+afterEvaluate {
+    tasks.getByName("processApplicationManifestReleaseForBundle").finalizedBy patchBundleReleaseManifest
 }
 
 apply plugin: 'com.google.gms.google-services'

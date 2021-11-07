@@ -8,6 +8,7 @@ import android.animation.ValueAnimator;
 import android.os.Build;
 import android.view.View;
 import android.view.ViewPropertyAnimator;
+import android.view.animation.Interpolator;
 import android.view.animation.OvershootInterpolator;
 
 import androidx.annotation.NonNull;
@@ -18,12 +19,16 @@ import org.telegram.messenger.BuildVars;
 import org.telegram.messenger.FileLog;
 import org.telegram.messenger.ImageReceiver;
 import org.telegram.messenger.MessageObject;
+import org.telegram.messenger.SharedConfig;
+import org.telegram.ui.ActionBar.Theme;
 import org.telegram.ui.Cells.BotHelpCell;
 import org.telegram.ui.Cells.ChatMessageCell;
 import org.telegram.ui.ChatActivity;
 import org.telegram.ui.Components.ChatGreetingsView;
 import org.telegram.ui.Components.CubicBezierInterpolator;
 import org.telegram.ui.Components.RecyclerListView;
+import org.telegram.ui.TextMessageEnterTransition;
+import org.telegram.ui.VoiceMessageEnterTransition;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -31,6 +36,9 @@ import java.util.HashMap;
 import java.util.List;
 
 public class ChatListItemAnimator extends DefaultItemAnimator {
+
+    public static final long DEFAULT_DURATION = 250;
+    public static final Interpolator DEFAULT_INTERPOLATOR = new CubicBezierInterpolator(0.19919472913616398, 0.010644531250000006, 0.27920937042459737, 0.91025390625);
 
     private final ChatActivity activity;
     private final RecyclerListView recyclerListView;
@@ -47,13 +55,15 @@ public class ChatListItemAnimator extends DefaultItemAnimator {
     private RecyclerView.ViewHolder greetingsSticker;
     private ChatGreetingsView chatGreetingsView;
 
-    public ChatListItemAnimator(ChatActivity activity, RecyclerListView listView) {
+    private boolean reversePositions;
+    private final Theme.ResourcesProvider resourcesProvider;
+
+    public ChatListItemAnimator(ChatActivity activity, RecyclerListView listView, Theme.ResourcesProvider resourcesProvider) {
+        this.resourcesProvider = resourcesProvider;
         this.activity = activity;
         this.recyclerListView = listView;
-        translationInterpolator = CubicBezierInterpolator.DEFAULT;
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            listView.getElevation();
-        }
+        translationInterpolator = DEFAULT_INTERPOLATOR;
+        setSupportsChangeAnimations(false);
     }
 
     @Override
@@ -69,8 +79,15 @@ public class ChatListItemAnimator extends DefaultItemAnimator {
         boolean runTranslationFromBottom = false;
         if (shouldAnimateEnterFromBottom) {
             for (int i = 0; i < mPendingAdditions.size(); i++) {
-                if (mPendingAdditions.get(i).getLayoutPosition() == 0) {
-                    runTranslationFromBottom = true;
+                if (reversePositions) {
+                    int itemCount = recyclerListView.getAdapter() == null ? 0 : recyclerListView.getAdapter().getItemCount();
+                    if (mPendingAdditions.get(i).getLayoutPosition() == itemCount - 1) {
+                        runTranslationFromBottom = true;
+                    }
+                } else {
+                    if (mPendingAdditions.get(i).getLayoutPosition() == 0) {
+                        runTranslationFromBottom = true;
+                    }
                 }
             }
         }
@@ -85,7 +102,11 @@ public class ChatListItemAnimator extends DefaultItemAnimator {
 
         ValueAnimator valueAnimator = ValueAnimator.ofFloat(0, 1f);
         valueAnimator.addUpdateListener(animation -> {
-            activity.onListItemAniamtorTick();
+            if (activity != null) {
+                activity.onListItemAniamtorTick();
+            } else {
+                recyclerListView.invalidate();
+            }
         });
         valueAnimator.setDuration(getRemoveDuration() + getMoveDuration());
         valueAnimator.start();
@@ -222,6 +243,7 @@ public class ChatListItemAnimator extends DefaultItemAnimator {
         if (res && shouldAnimateEnterFromBottom) {
             boolean runTranslationFromBottom = false;
             for (int i = 0; i < mPendingAdditions.size(); i++) {
+
                 if (mPendingAdditions.get(i).getLayoutPosition() == 0) {
                     runTranslationFromBottom = true;
                 }
@@ -263,8 +285,26 @@ public class ChatListItemAnimator extends DefaultItemAnimator {
         view.setTranslationY(addedItemsHeight);
         holder.itemView.setScaleX(1);
         holder.itemView.setScaleY(1);
-        if (!(holder.itemView instanceof ChatMessageCell && ((ChatMessageCell) holder.itemView).getTransitionParams().ignoreAlpha)) {
+        ChatMessageCell chatMessageCell = holder.itemView instanceof ChatMessageCell ? (ChatMessageCell) holder.itemView : null;
+        if (!(chatMessageCell != null && chatMessageCell.getTransitionParams().ignoreAlpha)) {
             holder.itemView.setAlpha(1);
+        }
+        if (chatMessageCell != null && activity.animatingMessageObjects.contains(chatMessageCell.getMessageObject())) {
+            activity.animatingMessageObjects.remove(chatMessageCell.getMessageObject());
+            if (activity.getChatActivityEnterView().canShowMessageTransition()) {
+                if (chatMessageCell.getMessageObject().isVoice()) {
+                    if (Math.abs(view.getTranslationY()) < view.getMeasuredHeight() * 3f) {
+                        VoiceMessageEnterTransition transition = new VoiceMessageEnterTransition(chatMessageCell, activity.getChatActivityEnterView(), recyclerListView, activity.messageEnterTransitionContainer, resourcesProvider);
+                        transition.start();
+                    }
+                } else {
+                    if (SharedConfig.getDevicePerformanceClass() != SharedConfig.PERFORMANCE_CLASS_LOW && Math.abs(view.getTranslationY()) < recyclerListView.getMeasuredHeight()) {
+                        TextMessageEnterTransition transition = new TextMessageEnterTransition(chatMessageCell, activity, recyclerListView, activity.messageEnterTransitionContainer, resourcesProvider);
+                        transition.start();
+                    }
+                }
+                activity.getChatActivityEnterView().startMessageTransition();
+            }
         }
         animation.translationY(0).setDuration(getMoveDuration())
                 .setInterpolator(translationInterpolator)
@@ -353,6 +393,20 @@ public class ChatListItemAnimator extends DefaultItemAnimator {
             fromX += (int) holder.itemView.getTranslationX();
         }
         fromY += (int) holder.itemView.getTranslationY();
+        float imageX = 0;
+        float imageY = 0;
+        float imageW = 0;
+        float imageH = 0;
+        int[] roundRadius = new int[4];
+        if (chatMessageCell != null) {
+            imageX = chatMessageCell.getPhotoImage().getImageX();
+            imageY = chatMessageCell.getPhotoImage().getImageY();
+            imageW = chatMessageCell.getPhotoImage().getImageWidth();
+            imageH = chatMessageCell.getPhotoImage().getImageHeight();
+            for (int i = 0; i < 4; i++) {
+                roundRadius[i] = chatMessageCell.getPhotoImage().getRoundRadius()[i];
+            }
+        }
         resetAnimation(holder);
         int deltaX = toX - fromX;
         int deltaY = toY - fromY;
@@ -392,12 +446,20 @@ public class ChatListItemAnimator extends DefaultItemAnimator {
                     recyclerListView.invalidate();
 
                     params.imageChangeBoundsTransition = true;
-                    params.animateToImageX = newImage.getImageX();
-                    params.animateToImageY = newImage.getImageY();
-                    params.animateToImageW = newImage.getImageWidth();
-                    params.animateToImageH = newImage.getImageHeight();
+                    if (chatMessageCell.getMessageObject().isRoundVideo()) {
+                        params.animateToImageX = imageX;
+                        params.animateToImageY = imageY;
+                        params.animateToImageW = imageW;
+                        params.animateToImageH = imageH;
+                        params.animateToRadius = roundRadius;
+                    } else {
+                        params.animateToImageX = newImage.getImageX();
+                        params.animateToImageY = newImage.getImageY();
+                        params.animateToImageW = newImage.getImageWidth();
+                        params.animateToImageH = newImage.getImageHeight();
+                        params.animateToRadius = newImage.getRoundRadius();
+                    }
 
-                    params.animateToRadius = newImage.getRoundRadius();
                     params.animateRadius = false;
                     for (int i = 0; i < 4; i++) {
                         if (params.imageRoundRadius[i] != params.animateToRadius[i]) {
@@ -419,9 +481,11 @@ public class ChatListItemAnimator extends DefaultItemAnimator {
                             group.transitionParams.captionEnterProgress = group.transitionParams.drawCaptionLayout ? 1f : 0;
                         }
                         if (params.animateRadius) {
-                            params.animateToRadius = new int[4];
-                            for (int i = 0; i < 4; i++) {
-                                params.animateToRadius[i] = newImage.getRoundRadius()[i];
+                            if (params.animateToRadius == newImage.getRoundRadius()) {
+                                params.animateToRadius = new int[4];
+                                for (int i = 0; i < 4; i++) {
+                                    params.animateToRadius[i] = newImage.getRoundRadius()[i];
+                                }
                             }
                             newImage.setRoundRadius(params.imageRoundRadius);
                         }
@@ -614,14 +678,24 @@ public class ChatListItemAnimator extends DefaultItemAnimator {
 
         MoveInfoExtended moveInfoExtended = (MoveInfoExtended) moveInfo;
 
-        if (holder.itemView instanceof BotHelpCell) {
+        if (activity != null && holder.itemView instanceof BotHelpCell) {
             BotHelpCell botCell = (BotHelpCell) holder.itemView ;
-            float top = recyclerListView.getMeasuredHeight() / 2 - botCell.getMeasuredHeight() / 2 + activity.getChatListViewPadding();
-            float animateTo = 0;
-            if (botCell.getTop() > top) {
-                animateTo = top - botCell.getTop();
-            }
-            animatorSet.playTogether(ObjectAnimator.ofFloat(botCell, View.TRANSLATION_Y, botCell.getTranslationY(), animateTo));
+            float animateFrom = botCell.getTranslationY();
+
+            ValueAnimator valueAnimator = ValueAnimator.ofFloat(0, 1f);
+            valueAnimator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
+                @Override
+                public void onAnimationUpdate(ValueAnimator valueAnimator) {
+                    float v = (float) valueAnimator.getAnimatedValue();
+                    float top = recyclerListView.getMeasuredHeight() / 2f - botCell.getMeasuredHeight() / 2f + activity.getChatListViewPadding();
+                    float animateTo = 0;
+                    if (botCell.getTop() > top) {
+                        animateTo = top - botCell.getTop();
+                    }
+                    botCell.setTranslationY(animateFrom * (1f - v) + animateTo * v);
+                }
+            });
+            animatorSet.playTogether(valueAnimator);
         } else if (holder.itemView instanceof ChatMessageCell) {
             ChatMessageCell chatMessageCell = (ChatMessageCell) holder.itemView;
             ChatMessageCell.TransitionParams params = chatMessageCell.getTransitionParams();
@@ -646,6 +720,7 @@ public class ChatListItemAnimator extends DefaultItemAnimator {
                 }
 
                 int[] finalFromRoundRadius = fromRoundRadius;
+
                 valueAnimator.addUpdateListener(animation -> {
                     float v = (float) animation.getAnimatedValue();
                     float x = moveInfoExtended.imageX * (1f - v) + params.animateToImageX * v;
@@ -674,12 +749,6 @@ public class ChatListItemAnimator extends DefaultItemAnimator {
                     chatMessageCell.setImageCoords(x, y, width, height);
                     holder.itemView.invalidate();
                 });
-                animatorSet.addListener(new AnimatorListenerAdapter() {
-                    @Override
-                    public void onAnimationEnd(Animator animation) {
-                        params.imageChangeBoundsTransition = false;
-                    }
-                });
                 animatorSet.playTogether(valueAnimator);
             }
             if (moveInfoExtended.deltaBottom != 0 || moveInfoExtended.deltaRight != 0 || moveInfoExtended.deltaTop != 0 || moveInfoExtended.deltaLeft != 0) {
@@ -691,15 +760,15 @@ public class ChatListItemAnimator extends DefaultItemAnimator {
                 valueAnimator.addUpdateListener(animation -> {
                     float v = (float) animation.getAnimatedValue();
                     if (moveInfoExtended.animateBackgroundOnly) {
-                        params.deltaLeft = (int) (-moveInfoExtended.deltaLeft * v);
-                        params.deltaRight = (int) (-moveInfoExtended.deltaRight * v);
-                        params.deltaTop = (int) (-moveInfoExtended.deltaTop * v);
-                        params.deltaBottom = (int) (-moveInfoExtended.deltaBottom * v);
+                        params.deltaLeft = -moveInfoExtended.deltaLeft * v;
+                        params.deltaRight = -moveInfoExtended.deltaRight * v;
+                        params.deltaTop = -moveInfoExtended.deltaTop * v;
+                        params.deltaBottom = -moveInfoExtended.deltaBottom * v;
                     } else {
-                        params.deltaLeft = (int) (-moveInfoExtended.deltaLeft * v - chatMessageCell.getAnimationOffsetX());
-                        params.deltaRight = (int) (-moveInfoExtended.deltaRight * v - chatMessageCell.getAnimationOffsetX());
-                        params.deltaTop = (int) (-moveInfoExtended.deltaTop * v - chatMessageCell.getTranslationY());
-                        params.deltaBottom = (int) (-moveInfoExtended.deltaBottom * v - chatMessageCell.getTranslationY());
+                        params.deltaLeft = -moveInfoExtended.deltaLeft * v - chatMessageCell.getAnimationOffsetX();
+                        params.deltaRight = -moveInfoExtended.deltaRight * v - chatMessageCell.getAnimationOffsetX();
+                        params.deltaTop = -moveInfoExtended.deltaTop * v - chatMessageCell.getTranslationY();
+                        params.deltaBottom = -moveInfoExtended.deltaBottom * v - chatMessageCell.getTranslationY();
                     }
                     chatMessageCell.invalidate();
                 });
@@ -729,7 +798,9 @@ public class ChatListItemAnimator extends DefaultItemAnimator {
                     if (animateCaption) {
                         groupTransitionParams.captionEnterProgress = captionEnterFrom * v + captionEnterTo * (1f - v);
                     }
-                    recyclerListView.invalidate();
+                    if (recyclerListView != null) {
+                        recyclerListView.invalidate();
+                    }
                 });
 
                 valueAnimator.addListener(new AnimatorListenerAdapter() {
@@ -1283,7 +1354,7 @@ public class ChatListItemAnimator extends DefaultItemAnimator {
             animatorSet.setInterpolator(new OvershootInterpolator());
         } else {
             animatorSet.setStartDelay(currentDelay);
-            animatorSet.setDuration(220);
+            animatorSet.setDuration(DEFAULT_DURATION);
         }
 
         animatorSet.addListener(new AnimatorListenerAdapter() {
@@ -1362,12 +1433,12 @@ public class ChatListItemAnimator extends DefaultItemAnimator {
 
     @Override
     public long getMoveDuration() {
-        return 220;
+        return DEFAULT_DURATION;
     }
 
     @Override
     public long getChangeDuration() {
-        return 220;
+        return DEFAULT_DURATION;
     }
 
     public void runOnAnimationEnd(Runnable runnable) {
@@ -1401,6 +1472,10 @@ public class ChatListItemAnimator extends DefaultItemAnimator {
         greetingsSticker = holder;
         chatGreetingsView = greetingsViewContainer;
         shouldAnimateEnterFromBottom = false;
+    }
+
+    public void setReversePositions(boolean reversePositions) {
+        this.reversePositions = reversePositions;
     }
 
     class MoveInfoExtended extends MoveInfo {

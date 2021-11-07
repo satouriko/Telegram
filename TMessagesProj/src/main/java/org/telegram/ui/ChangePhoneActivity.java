@@ -27,6 +27,7 @@ import android.graphics.PorterDuff;
 import android.graphics.PorterDuffColorFilter;
 import android.graphics.Rect;
 import android.graphics.drawable.Drawable;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.telephony.PhoneNumberUtils;
@@ -68,10 +69,13 @@ import org.telegram.ui.ActionBar.AlertDialog;
 import org.telegram.ui.ActionBar.BaseFragment;
 import org.telegram.ui.ActionBar.Theme;
 import org.telegram.ui.ActionBar.ThemeDescription;
+import org.telegram.ui.Cells.SettingsSuggestionCell;
 import org.telegram.ui.Components.AlertsCreator;
 import org.telegram.ui.Components.EditTextBoldCursor;
 import org.telegram.ui.Components.HintEditText;
 import org.telegram.ui.Components.LayoutHelper;
+import org.telegram.ui.Components.RLottieDrawable;
+import org.telegram.ui.Components.RLottieImageView;
 import org.telegram.ui.Components.SlideView;
 
 import java.io.BufferedReader;
@@ -97,7 +101,7 @@ public class ChangePhoneActivity extends BaseFragment {
 
     private final static int done_button = 1;
 
-    private class ProgressView extends View {
+    private static class ProgressView extends View {
 
         private Paint paint = new Paint();
         private Paint paint2 = new Paint();
@@ -375,8 +379,8 @@ public class ChangePhoneActivity extends BaseFragment {
             addView(countryButton, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 36, 0, 0, 0, 14));
             countryButton.setOnClickListener(view -> {
                 CountrySelectActivity fragment = new CountrySelectActivity(true);
-                fragment.setCountrySelectActivityDelegate((name, shortName) -> {
-                    selectCountry(name);
+                fragment.setCountrySelectActivityDelegate((country) -> {
+                    selectCountry(country.name);
                     AndroidUtilities.runOnUIThread(() -> AndroidUtilities.showKeyboard(phoneField), 300);
                     phoneField.requestFocus();
                     phoneField.setSelection(phoneField.length());
@@ -582,7 +586,7 @@ public class ChangePhoneActivity extends BaseFragment {
                     }
                     phoneField.setText(builder);
                     if (start >= 0) {
-                        phoneField.setSelection(start <= phoneField.length() ? start : phoneField.length());
+                        phoneField.setSelection(Math.min(start, phoneField.length()));
                     }
                     phoneField.onTextChange();
                     ignoreOnPhoneChange = false;
@@ -830,11 +834,13 @@ public class ChangePhoneActivity extends BaseFragment {
         private TextView confirmTextView;
         private TextView titleTextView;
         private ImageView blackImageView;
-        private ImageView blueImageView;
+        private RLottieImageView blueImageView;
         private TextView timeText;
         private TextView problemText;
         private Bundle currentParams;
         private ProgressView progressView;
+
+        RLottieDrawable hintDrawable;
 
         private Timer timeTimer;
         private Timer codeTimer;
@@ -898,16 +904,19 @@ public class ChangePhoneActivity extends BaseFragment {
                     blackImageView.setColorFilter(new PorterDuffColorFilter(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText), PorterDuff.Mode.MULTIPLY));
                     frameLayout.addView(blackImageView, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.LEFT | Gravity.TOP, 0, 0, 0, 0));
 
-                    blueImageView = new ImageView(context);
+                    blueImageView = new RLottieImageView(context);
                     blueImageView.setImageResource(R.drawable.sms_bubble);
                     blueImageView.setColorFilter(new PorterDuffColorFilter(Theme.getColor(Theme.key_chats_actionBackground), PorterDuff.Mode.MULTIPLY));
                     frameLayout.addView(blueImageView, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.LEFT | Gravity.TOP, 0, 0, 0, 0));
 
                     titleTextView.setText(LocaleController.getString("SentAppCodeTitle", R.string.SentAppCodeTitle));
                 } else {
-                    blueImageView = new ImageView(context);
-                    blueImageView.setImageResource(R.drawable.sms_code);
-                    blueImageView.setColorFilter(new PorterDuffColorFilter(Theme.getColor(Theme.key_chats_actionBackground), PorterDuff.Mode.MULTIPLY));
+                    blueImageView = new RLottieImageView(context);
+                    hintDrawable = new RLottieDrawable(R.raw.sms_incoming_info, "" + R.raw.sms_incoming_info, AndroidUtilities.dp(64), AndroidUtilities.dp(64), true, null);
+                    hintDrawable.setLayerColor("Bubble.**", Theme.getColor(Theme.key_chats_actionBackground));
+                    hintDrawable.setLayerColor("Phone.**", Theme.getColor(Theme.key_chats_actionBackground));
+                    blueImageView.setAnimation(hintDrawable);
+
                     frameLayout.addView(blueImageView, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.LEFT | Gravity.TOP, 0, 0, 0, 0));
 
                     titleTextView.setText(LocaleController.getString("SentSmsCodeTitle", R.string.SentSmsCodeTitle));
@@ -974,9 +983,9 @@ public class ChangePhoneActivity extends BaseFragment {
                         PackageInfo pInfo = ApplicationLoader.applicationContext.getPackageManager().getPackageInfo(ApplicationLoader.applicationContext.getPackageName(), 0);
                         String version = String.format(Locale.US, "%s (%d)", pInfo.versionName, pInfo.versionCode);
 
-                        Intent mailer = new Intent(Intent.ACTION_SEND);
-                        mailer.setType("message/rfc822");
-                        mailer.putExtra(Intent.EXTRA_EMAIL, new String[]{"sms@stel.com"});
+                        Intent mailer = new Intent(Intent.ACTION_SENDTO);
+                        mailer.setData(Uri.parse("mailto:"));
+                        mailer.putExtra(Intent.EXTRA_EMAIL, new String[]{"reports@stel.com"});
                         mailer.putExtra(Intent.EXTRA_SUBJECT, "Android registration/login issue " + version + " " + emailPhone);
                         mailer.putExtra(Intent.EXTRA_TEXT, "Phone: " + requestPhone + "\nApp version: " + version + "\nOS version: SDK " + Build.VERSION.SDK_INT + "\nDevice Name: " + Build.MANUFACTURER + Build.MODEL + "\nLocale: " + Locale.getDefault() + "\nError: " + lastError);
                         getContext().startActivity(Intent.createChooser(mailer, "Send email..."));
@@ -996,10 +1005,8 @@ public class ChangePhoneActivity extends BaseFragment {
                 int maxHeight = AndroidUtilities.dp(291);
                 if (scrollHeight - innerHeight < requiredHeight) {
                     setMeasuredDimension(getMeasuredWidth(), innerHeight + requiredHeight);
-                } else if (scrollHeight > maxHeight) {
-                    setMeasuredDimension(getMeasuredWidth(), maxHeight);
                 } else {
-                    setMeasuredDimension(getMeasuredWidth(), scrollHeight);
+                    setMeasuredDimension(getMeasuredWidth(), Math.min(scrollHeight, maxHeight));
                 }
             }
         }
@@ -1430,6 +1437,7 @@ public class ChangePhoneActivity extends BaseFragment {
                     MessagesController.getInstance(currentAccount).putUser(user, false);
                     finishFragment();
                     NotificationCenter.getInstance(currentAccount).postNotificationName(NotificationCenter.mainUserInfoChanged);
+                    getMessagesController().removeSuggestion(0, "VALIDATE_PHONE_NUMBER");
                 } else {
                     lastError = error.text;
                     if (currentType == 3 && (nextType == 4 || nextType == 2) || currentType == 2 && (nextType == 4 || nextType == 3) || currentType == 4 && nextType == 2) {
@@ -1515,6 +1523,9 @@ public class ChangePhoneActivity extends BaseFragment {
             if (currentType == 3) {
                 return;
             }
+            if (hintDrawable != null) {
+                hintDrawable.setCurrentFrame(0);
+            }
             AndroidUtilities.runOnUIThread(() -> {
                 if (codeField != null) {
                     for (int a = codeField.length - 1; a >= 0; a--) {
@@ -1525,6 +1536,9 @@ public class ChangePhoneActivity extends BaseFragment {
                             break;
                         }
                     }
+                }
+                if (hintDrawable != null) {
+                    hintDrawable.start();
                 }
             }, 100);
         }
@@ -1559,6 +1573,18 @@ public class ChangePhoneActivity extends BaseFragment {
         LoginActivitySmsView smsView4 = (LoginActivitySmsView) views[4];
 
         ArrayList<ThemeDescription> arrayList = new ArrayList<>();
+
+        ThemeDescription.ThemeDescriptionDelegate descriptionDelegate = () -> {
+            for (int i = 0; i < views.length; i++) {
+                if (views[i] instanceof LoginActivity.LoginActivitySmsView) {
+                    LoginActivity.LoginActivitySmsView smsView = (LoginActivity.LoginActivitySmsView) views[i];
+                    if (smsView.hintDrawable != null) {
+                        smsView.hintDrawable.setLayerColor("Bubble.**", Theme.getColor(Theme.key_chats_actionBackground));
+                        smsView.hintDrawable.setLayerColor("Phone.**", Theme.getColor(Theme.key_chats_actionBackground));
+                    }
+                }
+            }
+        };
 
         arrayList.add(new ThemeDescription(fragmentView, ThemeDescription.FLAG_BACKGROUND, null, null, null, null, Theme.key_windowBackgroundWhite));
 
@@ -1640,6 +1666,7 @@ public class ChangePhoneActivity extends BaseFragment {
         arrayList.add(new ThemeDescription(smsView4.progressView, 0, new Class[]{ProgressView.class}, new String[]{"paint"}, null, null, null, Theme.key_login_progressOuter));
         arrayList.add(new ThemeDescription(smsView4.blackImageView, ThemeDescription.FLAG_IMAGECOLOR, null, null, null, null, Theme.key_windowBackgroundWhiteBlackText));
         arrayList.add(new ThemeDescription(smsView4.blueImageView, ThemeDescription.FLAG_IMAGECOLOR, null, null, null, null, Theme.key_chats_actionBackground));
+        arrayList.add(new ThemeDescription(smsView4.blueImageView, 0, null, null, null, descriptionDelegate, Theme.key_chats_actionBackground));
 
         return arrayList;
     }

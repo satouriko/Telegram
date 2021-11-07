@@ -121,7 +121,7 @@ public class ChannelCreateActivity extends BaseFragment implements NotificationC
     private LoadingCell loadingAdminedCell;
 
     private int currentStep;
-    private int chatId;
+    private long chatId;
     private boolean canCreatePublic = true;
     private TLRPC.InputFile inputPhoto;
     private TLRPC.InputFile inputVideo;
@@ -152,7 +152,7 @@ public class ChannelCreateActivity extends BaseFragment implements NotificationC
                     loadAdminedChannels();
                 }
             }
-            chatId = args.getInt("chat_id", 0);
+            chatId = args.getLong("chat_id", 0);
         }
     }
 
@@ -306,7 +306,7 @@ public class ChannelCreateActivity extends BaseFragment implements NotificationC
                         }
                         Bundle args = new Bundle();
                         args.putInt("step", 2);
-                        args.putInt("chatId", chatId);
+                        args.putLong("chatId", chatId);
                         args.putInt("chatType", ChatObject.CHAT_TYPE_CHANNEL);
                         presentFragment(new GroupCreateActivity(args), true);
                     }
@@ -499,8 +499,12 @@ public class ChannelCreateActivity extends BaseFragment implements NotificationC
                     avatarEditor.setAnimation(cameraDrawable);
                     cameraDrawable.setCurrentFrame(0);
                 }, dialog -> {
-                    cameraDrawable.setCustomEndFrame(86);
-                    avatarEditor.playAnimation();
+                    if (!imageUpdater.isUploadingImage()) {
+                        cameraDrawable.setCustomEndFrame(86);
+                        avatarEditor.playAnimation();
+                    } else {
+                        cameraDrawable.setCurrentFrame(0, false);
+                    }
                 });
                 cameraDrawable.setCurrentFrame(0);
                 cameraDrawable.setCustomEndFrame(43);
@@ -718,8 +722,9 @@ public class ChannelCreateActivity extends BaseFragment implements NotificationC
             privateContainer.setOrientation(LinearLayout.VERTICAL);
             linkContainer.addView(privateContainer, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
 
-            permanentLinkView = new LinkActionView(context, this, null, chatId, true);
-            permanentLinkView.showOptions(false);
+            permanentLinkView = new LinkActionView(context, this, null, chatId, true, ChatObject.isChannel(getMessagesController().getChat(chatId)));
+            //permanentLinkView.showOptions(false);
+            permanentLinkView.hideRevokeOption(true);
             permanentLinkView.setUsers(0, null);
             privateContainer.addView(permanentLinkView);
 
@@ -755,19 +760,15 @@ public class ChannelCreateActivity extends BaseFragment implements NotificationC
         if (loadingInvite || invite != null) {
             return;
         }
+        TLRPC.ChatFull chatFull = getMessagesController().getChatFull(chatId);
+        if (chatFull != null) {
+            invite = chatFull.exported_invite;
+        }
+        if (invite != null) {
+            return;
+        }
         loadingInvite = true;
-        TLRPC.TL_messages_exportChatInvite req = new TLRPC.TL_messages_exportChatInvite();
-        req.peer = getMessagesController().getInputPeer(-chatId);
-        final int reqId = getConnectionsManager().sendRequest(req, (response, error) -> AndroidUtilities.runOnUIThread(() -> {
-            if (error == null) {
-                invite = (TLRPC.TL_chatInviteExported) response;
-            }
-            loadingInvite = false;
-            permanentLinkView.setLink(invite != null ? invite.link : null);
-        }));
-        getConnectionsManager().bindRequestToGuid(reqId, classGuid);
-
-        /*TLRPC.TL_messages_getExportedChatInvites req = new TLRPC.TL_messages_getExportedChatInvites();  TODO layer 124
+        TLRPC.TL_messages_getExportedChatInvites req = new TLRPC.TL_messages_getExportedChatInvites();
         req.peer = getMessagesController().getInputPeer(-chatId);
         req.admin_id = getMessagesController().getInputUser(getUserConfig().getCurrentUser());
         req.limit = 1;
@@ -779,7 +780,7 @@ public class ChannelCreateActivity extends BaseFragment implements NotificationC
             }
             loadingInvite = false;
             permanentLinkView.setLink(invite != null ? invite.link : null);
-        }));*/
+        }));
     }
 
     private void updatePrivatePublic() {
@@ -882,6 +883,7 @@ public class ChannelCreateActivity extends BaseFragment implements NotificationC
             return;
         }
         if (avatarAnimation != null) {
+            avatarAnimation.removeAllListeners();
             avatarAnimation.cancel();
             avatarAnimation = null;
         }
@@ -893,6 +895,9 @@ public class ChannelCreateActivity extends BaseFragment implements NotificationC
                 avatarAnimation.playTogether(ObjectAnimator.ofFloat(avatarEditor, View.ALPHA, 0.0f),
                         ObjectAnimator.ofFloat(avatarProgressView, View.ALPHA, 1.0f));
             } else {
+                if (avatarEditor.getVisibility() != View.VISIBLE) {
+                    avatarEditor.setAlpha(0f);
+                }
                 avatarEditor.setVisibility(View.VISIBLE);
 
                 avatarAnimation.playTogether(ObjectAnimator.ofFloat(avatarEditor, View.ALPHA, 1.0f),
@@ -1000,13 +1005,13 @@ public class ChannelCreateActivity extends BaseFragment implements NotificationC
                     FileLog.e(e);
                 }
             }
-            int chat_id = (Integer) args[0];
+            long chat_id = (Long) args[0];
             Bundle bundle = new Bundle();
             bundle.putInt("step", 1);
-            bundle.putInt("chat_id", chat_id);
+            bundle.putLong("chat_id", chat_id);
             bundle.putBoolean("canCreatePublic", canCreatePublic);
             if (inputPhoto != null || inputVideo != null) {
-                MessagesController.getInstance(currentAccount).changeChatAvatar(chat_id, null, inputPhoto, inputVideo, videoTimestamp, inputVideoPath, avatar, avatarBig);
+                MessagesController.getInstance(currentAccount).changeChatAvatar(chat_id, null, inputPhoto, inputVideo, videoTimestamp, inputVideoPath, avatar, avatarBig, null);
             }
             presentFragment(new ChannelCreateActivity(bundle), true);
         }

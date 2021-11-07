@@ -25,17 +25,23 @@ import org.telegram.ui.ActionBar.Theme;
 
 public class EmptyTextProgressView extends FrameLayout {
 
+    private final Theme.ResourcesProvider resourcesProvider;
     private TextView textView;
     private View progressView;
     private boolean inLayout;
     private int showAtPos;
 
     public EmptyTextProgressView(Context context) {
-        this(context, null);
+        this(context, null, null);
     }
 
     public EmptyTextProgressView(Context context, View progressView) {
+        this(context, progressView, null);
+    }
+
+    public EmptyTextProgressView(Context context, View progressView, Theme.ResourcesProvider resourcesProvider) {
         super(context);
+        this.resourcesProvider = resourcesProvider;
 
         if (progressView == null) {
             progressView = new RadialProgressView(context);
@@ -47,26 +53,30 @@ public class EmptyTextProgressView extends FrameLayout {
 
         textView = new TextView(context);
         textView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 20);
-        textView.setTextColor(Theme.getColor(Theme.key_emptyListPlaceholder));
+        textView.setTextColor(getThemedColor(Theme.key_emptyListPlaceholder));
         textView.setGravity(Gravity.CENTER);
         textView.setPadding(AndroidUtilities.dp(20), 0, AndroidUtilities.dp(20), 0);
         textView.setText(LocaleController.getString("NoResult", R.string.NoResult));
         addView(textView, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT));
 
-        progressView.setAlpha(0f);
-        textView.setAlpha(0f);
+        AndroidUtilities.updateViewVisibilityAnimated(textView, false, 2f, false);
+        AndroidUtilities.updateViewVisibilityAnimated(progressView, false, 1f, false);
 
         setOnTouchListener((v, event) -> true);
     }
 
     public void showProgress() {
-        textView.animate().alpha(0f).setDuration(150).start();
-        progressView.animate().alpha(1f).setDuration(150).start();
+        showProgress(true);
+    }
+
+    public void showProgress(boolean animated) {
+        AndroidUtilities.updateViewVisibilityAnimated(textView, false, 0.9f, animated);
+        AndroidUtilities.updateViewVisibilityAnimated(progressView, true, 1f, animated);
     }
 
     public void showTextView() {
-        textView.animate().alpha(1f).setDuration(150).start();
-        progressView.animate().alpha(0f).setDuration(150).start();
+        AndroidUtilities.updateViewVisibilityAnimated(textView, true, 0.9f, true);
+        AndroidUtilities.updateViewVisibilityAnimated(progressView, false, 1f, true);
     }
 
     public void setText(String text) {
@@ -89,7 +99,7 @@ public class EmptyTextProgressView extends FrameLayout {
         } else {
             Drawable drawable = getContext().getResources().getDrawable(resId).mutate();
             if (drawable != null) {
-                drawable.setColorFilter(new PorterDuffColorFilter(Theme.getColor(Theme.key_emptyListPlaceholder), PorterDuff.Mode.MULTIPLY));
+                drawable.setColorFilter(new PorterDuffColorFilter(getThemedColor(Theme.key_emptyListPlaceholder), PorterDuff.Mode.MULTIPLY));
             }
             textView.setCompoundDrawablesWithIntrinsicBounds(null, drawable, null, null);
             textView.setCompoundDrawablePadding(AndroidUtilities.dp(1));
@@ -123,12 +133,16 @@ public class EmptyTextProgressView extends FrameLayout {
 
             int x = (width - child.getMeasuredWidth()) / 2;
             int y;
-            if (showAtPos == 2) {
-                y = (AndroidUtilities.dp(100) - child.getMeasuredHeight()) / 2 + getPaddingTop();
-            } else if (showAtPos == 1) {
-                y = (height / 2 - child.getMeasuredHeight()) / 2 + getPaddingTop();
-            } else {
+            if (child == progressView && progressView instanceof FlickerLoadingView) {
                 y = (height - child.getMeasuredHeight()) / 2 + getPaddingTop();
+            } else {
+                if (showAtPos == 2) {
+                    y = (AndroidUtilities.dp(100) - child.getMeasuredHeight()) / 2 + getPaddingTop();
+                } else if (showAtPos == 1) {
+                    y = (height / 2 - child.getMeasuredHeight()) / 2 + getPaddingTop();
+                } else {
+                    y = (height - child.getMeasuredHeight()) / 2 + getPaddingTop();
+                }
             }
             child.layout(x, y, x + child.getMeasuredWidth(), y + child.getMeasuredHeight());
         }
@@ -145,5 +159,10 @@ public class EmptyTextProgressView extends FrameLayout {
     @Override
     public boolean hasOverlappingRendering() {
         return false;
+    }
+
+    private int getThemedColor(String key) {
+        Integer color = resourcesProvider != null ? resourcesProvider.getColor(key) : null;
+        return color != null ? color : Theme.getColor(key);
     }
 }

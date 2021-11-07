@@ -11,8 +11,6 @@ package org.telegram.ui;
 import android.app.Activity;
 import android.content.Intent;
 import android.content.res.Configuration;
-import android.graphics.Shader;
-import android.graphics.drawable.BitmapDrawable;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.SystemClock;
@@ -46,6 +44,7 @@ import org.telegram.ui.ActionBar.Theme;
 import org.telegram.ui.Components.AlertsCreator;
 import org.telegram.ui.Components.LayoutHelper;
 import org.telegram.ui.Components.PasscodeView;
+import org.telegram.ui.Components.SizeNotifierFrameLayout;
 
 import java.util.ArrayList;
 
@@ -58,7 +57,7 @@ public class ExternalActionActivity extends Activity implements ActionBarLayout.
     private PasscodeView passcodeView;
     protected ActionBarLayout actionBarLayout;
     protected ActionBarLayout layersActionBarLayout;
-    protected View backgroundTablet;
+    protected SizeNotifierFrameLayout backgroundTablet;
     protected DrawerLayoutContainer drawerLayoutContainer;
 
     private Intent passcodeSaveIntent;
@@ -110,10 +109,14 @@ public class ExternalActionActivity extends Activity implements ActionBarLayout.
             layoutParams1.height = LayoutHelper.MATCH_PARENT;
             launchLayout.setLayoutParams(layoutParams1);
 
-            backgroundTablet = new View(this);
-            BitmapDrawable drawable = (BitmapDrawable) getResources().getDrawable(R.drawable.catstile);
-            drawable.setTileModeXY(Shader.TileMode.REPEAT, Shader.TileMode.REPEAT);
-            backgroundTablet.setBackgroundDrawable(drawable);
+            backgroundTablet = new SizeNotifierFrameLayout(this) {
+                @Override
+                protected boolean isActionBarVisible() {
+                    return false;
+                }
+            };
+            backgroundTablet.setOccupyStatusBar(false);
+            backgroundTablet.setBackgroundImage(Theme.getCachedWallpaper(), Theme.isWallpaperMotion());
             launchLayout.addView(backgroundTablet, LayoutHelper.createRelative(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
 
             launchLayout.addView(actionBarLayout, LayoutHelper.createRelative(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
@@ -163,10 +166,14 @@ public class ExternalActionActivity extends Activity implements ActionBarLayout.
             RelativeLayout launchLayout = new RelativeLayout(this);
             drawerLayoutContainer.addView(launchLayout, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
 
-            backgroundTablet = new View(this);
-            BitmapDrawable drawable = (BitmapDrawable) getResources().getDrawable(R.drawable.catstile);
-            drawable.setTileModeXY(Shader.TileMode.REPEAT, Shader.TileMode.REPEAT);
-            backgroundTablet.setBackgroundDrawable(drawable);
+            backgroundTablet = new SizeNotifierFrameLayout(this) {
+                @Override
+                protected boolean isActionBarVisible() {
+                    return false;
+                }
+            };
+            backgroundTablet.setOccupyStatusBar(false);
+            backgroundTablet.setBackgroundImage(Theme.getCachedWallpaper(), Theme.isWallpaperMotion());
             launchLayout.addView(backgroundTablet, LayoutHelper.createRelative(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
 
             launchLayout.addView(actionBarLayout, LayoutHelper.createRelative(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
@@ -205,7 +212,7 @@ public class ExternalActionActivity extends Activity implements ActionBarLayout.
         } else if (ArticleViewer.hasInstance() && ArticleViewer.getInstance().isVisible()) {
             ArticleViewer.getInstance().close(false, true);
         }
-        passcodeView.onShow();
+        passcodeView.onShow(true, false);
         SharedConfig.isWaitingForPasscodeEnter = true;
         drawerLayoutContainer.setAllowOpenDrawer(false, false);
         passcodeView.setDelegate(() -> {
@@ -299,7 +306,7 @@ public class ExternalActionActivity extends Activity implements ActionBarLayout.
                 }
             }
 
-            final int bot_id = intent.getIntExtra("bot_id", 0);
+            final long bot_id = intent.getLongExtra("bot_id", intent.getIntExtra("bot_id", 0));
             final String nonce = intent.getStringExtra("nonce");
             final String payload = intent.getStringExtra("payload");
             final TLRPC.TL_account_getAuthorizationForm req = new TLRPC.TL_account_getAuthorizationForm();

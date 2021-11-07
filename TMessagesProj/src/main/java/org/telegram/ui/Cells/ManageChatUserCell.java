@@ -156,7 +156,7 @@ public class ManageChatUserCell extends FrameLayout {
         super.onMeasure(MeasureSpec.makeMeasureSpec(MeasureSpec.getSize(widthMeasureSpec), MeasureSpec.EXACTLY), MeasureSpec.makeMeasureSpec(AndroidUtilities.dp(64) + (needDivider ? 1 : 0), MeasureSpec.EXACTLY));
     }
 
-    public int getUserId() {
+    public long getUserId() {
         if (currentObject instanceof TLRPC.User) {
             return ((TLRPC.User) currentObject).id;
         }
@@ -200,11 +200,11 @@ public class ManageChatUserCell extends FrameLayout {
             if (mask != 0) {
                 boolean continueUpdate = false;
                 if ((mask & MessagesController.UPDATE_MASK_AVATAR) != 0) {
-                    if (lastAvatar != null && photo == null || lastAvatar == null && photo != null || lastAvatar != null && photo != null && (lastAvatar.volume_id != photo.volume_id || lastAvatar.local_id != photo.local_id)) {
+                    if (lastAvatar != null && photo == null || lastAvatar == null && photo != null || lastAvatar != null && (lastAvatar.volume_id != photo.volume_id || lastAvatar.local_id != photo.local_id)) {
                         continueUpdate = true;
                     }
                 }
-                if (currentUser != null && !continueUpdate && (mask & MessagesController.UPDATE_MASK_STATUS) != 0) {
+                if (!continueUpdate && (mask & MessagesController.UPDATE_MASK_STATUS) != 0) {
                     int newStatus = 0;
                     if (currentUser.status != null) {
                         newStatus = currentUser.status.expires;
@@ -260,7 +260,7 @@ public class ManageChatUserCell extends FrameLayout {
                 }
             }
             lastAvatar = photo;
-            avatarImageView.setImage(ImageLocation.getForUser(currentUser, false), "50_50", avatarDrawable, currentUser);
+            avatarImageView.setForUserOrChat(currentUser, avatarDrawable);
         } else if (currentObject instanceof TLRPC.Chat) {
             TLRPC.Chat currentChat = (TLRPC.Chat) currentObject;
 
@@ -273,7 +273,7 @@ public class ManageChatUserCell extends FrameLayout {
             if (mask != 0) {
                 boolean continueUpdate = false;
                 if ((mask & MessagesController.UPDATE_MASK_AVATAR) != 0) {
-                    if (lastAvatar != null && photo == null || lastAvatar == null && photo != null || lastAvatar != null && photo != null && (lastAvatar.volume_id != photo.volume_id || lastAvatar.local_id != photo.local_id)) {
+                    if (lastAvatar != null && photo == null || lastAvatar == null && photo != null || lastAvatar != null && (lastAvatar.volume_id != photo.volume_id || lastAvatar.local_id != photo.local_id)) {
                         continueUpdate = true;
                     }
                 }
@@ -317,7 +317,7 @@ public class ManageChatUserCell extends FrameLayout {
                 }
             }
             lastAvatar = photo;
-            avatarImageView.setImage(ImageLocation.getForChat(currentChat, false), "50_50", avatarDrawable, currentChat);
+            avatarImageView.setForUserOrChat(currentChat, avatarDrawable);
         } else if (currentObject instanceof Integer) {
             nameTextView.setText(currentName);
             statusTextView.setTextColor(statusColor);

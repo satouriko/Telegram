@@ -129,7 +129,7 @@ public class NekoSettingsActivity extends BaseFragment implements UpdateHelper.U
         frameLayout.addView(listView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT, Gravity.TOP | Gravity.LEFT));
         listView.setOnItemClickListener((view, position, x, y) -> {
             if (position == sourceCodeRow) {
-                Browser.openUrl(getParentActivity(), "https://github.com/satouriko/nekolite");
+                Browser.openUrl(getParentActivity(), "https://github.com/satouriko/Telegram");
             } else if (position == checkUpdateRow) {
                 UpdateHelper.getInstance().checkNewVersionAvailable(this, false);
                 checkingUpdate = true;

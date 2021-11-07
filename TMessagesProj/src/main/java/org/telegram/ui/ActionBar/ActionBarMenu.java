@@ -17,7 +17,6 @@ import android.widget.LinearLayout;
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.ui.Adapters.FiltersView;
 import org.telegram.ui.Components.RLottieDrawable;
-import org.telegram.ui.Components.RLottieImageView;
 
 public class ActionBarMenu extends LinearLayout {
 
@@ -59,7 +58,11 @@ public class ActionBarMenu extends LinearLayout {
     }
 
     public ActionBarMenuItem addItem(int id, int icon) {
-        return addItem(id, icon, isActionMode ? parentActionBar.itemsActionModeBackgroundColor : parentActionBar.itemsBackgroundColor);
+        return addItem(id, icon, isActionMode ? parentActionBar.itemsActionModeBackgroundColor : parentActionBar.itemsBackgroundColor, null);
+    }
+
+    public ActionBarMenuItem addItem(int id, int icon, Theme.ResourcesProvider resourcesProvider) {
+        return addItem(id, icon, isActionMode ? parentActionBar.itemsActionModeBackgroundColor : parentActionBar.itemsBackgroundColor, resourcesProvider);
     }
 
     public ActionBarMenuItem addItem(int id, CharSequence text) {
@@ -67,7 +70,11 @@ public class ActionBarMenu extends LinearLayout {
     }
 
     public ActionBarMenuItem addItem(int id, int icon, int backgroundColor) {
-        return addItem(id, icon, null, backgroundColor, null, AndroidUtilities.dp(48), null);
+        return addItem(id, icon, backgroundColor, null);
+    }
+
+    public ActionBarMenuItem addItem(int id, int icon, int backgroundColor, Theme.ResourcesProvider resourcesProvider) {
+        return addItem(id, icon, null, backgroundColor, null, AndroidUtilities.dp(48), null, resourcesProvider);
     }
 
     public ActionBarMenuItem addItemWithWidth(int id, int icon, int width) {
@@ -79,7 +86,11 @@ public class ActionBarMenu extends LinearLayout {
     }
 
     public ActionBarMenuItem addItem(int id, int icon, CharSequence text, int backgroundColor, Drawable drawable, int width, CharSequence title) {
-        ActionBarMenuItem menuItem = new ActionBarMenuItem(getContext(), this, backgroundColor, isActionMode ? parentActionBar.itemsActionModeColor : parentActionBar.itemsColor, text != null);
+        return addItem(id, icon, text, backgroundColor, drawable, width, title, null);
+    }
+
+    public ActionBarMenuItem addItem(int id, int icon, CharSequence text, int backgroundColor, Drawable drawable, int width, CharSequence title, Theme.ResourcesProvider resourcesProvider) {
+        ActionBarMenuItem menuItem = new ActionBarMenuItem(getContext(), this, backgroundColor, isActionMode ? parentActionBar.itemsActionModeColor : parentActionBar.itemsColor, text != null, resourcesProvider);
         menuItem.setTag(id);
         if (text != null) {
             menuItem.textView.setText(text);
@@ -293,5 +304,42 @@ public class ActionBarMenu extends LinearLayout {
             View view = getChildAt(a);
             view.setEnabled(enabled);
         }
+    }
+
+    public int getItemsMeasuredWidth() {
+        int w = 0;
+        int count = getChildCount();
+        for (int a = 0; a < count; a++) {
+            View view = getChildAt(a);
+            if (view instanceof ActionBarMenuItem) {
+                w += view.getMeasuredWidth();
+            }
+        }
+        return w;
+    }
+
+    public boolean searchFieldVisible() {
+        int count = getChildCount();
+        for (int a = 0; a < count; a++) {
+            View view = getChildAt(a);
+            if (view instanceof ActionBarMenuItem && ((ActionBarMenuItem) view).getSearchContainer() != null && ((ActionBarMenuItem) view).getSearchContainer().getVisibility() == View.VISIBLE) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public void translateXItems(int offset) {
+        int count = getChildCount();
+        for (int a = 0; a < count; a++) {
+            View view = getChildAt(a);
+            if (view instanceof ActionBarMenuItem) {
+                ((ActionBarMenuItem) view).setTransitionOffset(offset);
+            }
+        }
+    }
+
+    public void clearSearchFilters() {
+
     }
 }

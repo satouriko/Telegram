@@ -17,21 +17,19 @@ import android.view.animation.OvershootInterpolator;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 
-import org.telegram.messenger.AccountInstance;
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.ChatObject;
 import org.telegram.messenger.LocaleController;
 import org.telegram.messenger.NotificationCenter;
 import org.telegram.messenger.R;
 import org.telegram.messenger.Utilities;
-import org.telegram.messenger.voip.VoIPBaseService;
 import org.telegram.messenger.voip.VoIPService;
 import org.telegram.tgnet.TLRPC;
 import org.telegram.ui.ActionBar.Theme;
 
 import java.util.Random;
 
-public class GroupCallPipButton extends FrameLayout implements NotificationCenter.NotificationCenterDelegate, VoIPBaseService.StateListener {
+public class GroupCallPipButton extends FrameLayout implements NotificationCenter.NotificationCenterDelegate, VoIPService.StateListener {
 
     Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
     BlobDrawable blobDrawable = new BlobDrawable(8);
@@ -409,7 +407,13 @@ public class GroupCallPipButton extends FrameLayout implements NotificationCente
             }
             wavesEnter = showWaves ? 1f : 0f;
         }
-        String contentDescription = LocaleController.getString("VoipGroupVoiceChat", R.string.VoipGroupVoiceChat);
+        String contentDescription;
+        VoIPService voIPService = VoIPService.getSharedInstance();
+        if (voIPService != null && ChatObject.isChannelOrGiga(voIPService.getChat())) {
+            contentDescription = LocaleController.getString("VoipChannelVoiceChat", R.string.VoipChannelVoiceChat);
+        } else {
+            contentDescription = LocaleController.getString("VoipGroupVoiceChat", R.string.VoipGroupVoiceChat);
+        }
         if (state == MUTE_BUTTON_STATE_UNMUTE) {
             contentDescription +=  ", " + LocaleController.getString("VoipTapToMute", R.string.VoipTapToMute);
         } else if (state == MUTE_BUTTON_STATE_RECONNECT) {
@@ -449,15 +453,16 @@ public class GroupCallPipButton extends FrameLayout implements NotificationCente
     }
 
     private void updateButtonState() {
-        if (VoIPService.getSharedInstance() != null && VoIPService.getSharedInstance().groupCall != null) {
-            int currentCallState = VoIPService.getSharedInstance().getCallState();
+        VoIPService voIPService = VoIPService.getSharedInstance();
+        if (voIPService != null && voIPService.groupCall != null) {
+            int currentCallState = voIPService.getCallState();
             if (currentCallState == VoIPService.STATE_WAIT_INIT || currentCallState == VoIPService.STATE_WAIT_INIT_ACK || currentCallState == VoIPService.STATE_CREATING || currentCallState == VoIPService.STATE_RECONNECTING) {
                 setState(FragmentContextViewWavesDrawable.MUTE_BUTTON_STATE_CONNECTING);
             } else {
-                TLRPC.TL_groupCallParticipant participant = VoIPService.getSharedInstance().groupCall.participants.get(AccountInstance.getInstance(VoIPService.getSharedInstance().getAccount()).getUserConfig().getClientUserId());
-                if (participant != null && !participant.can_self_unmute && participant.muted && !ChatObject.canManageCalls(VoIPService.getSharedInstance().getChat())) {
-                    if (!VoIPService.getSharedInstance().isMicMute()) {
-                        VoIPService.getSharedInstance().setMicMute(true, false, false);
+                TLRPC.TL_groupCallParticipant participant = voIPService.groupCall.participants.get(voIPService.getSelfId());
+                if (participant != null && !participant.can_self_unmute && participant.muted && !ChatObject.canManageCalls(voIPService.getChat())) {
+                    if (!voIPService.isMicMute()) {
+                        voIPService.setMicMute(true, false, false);
                     }
                     setState(FragmentContextViewWavesDrawable.MUTE_BUTTON_STATE_MUTED_BY_ADMIN);
                     final long now = SystemClock.uptimeMillis();
@@ -467,7 +472,7 @@ public class GroupCallPipButton extends FrameLayout implements NotificationCente
                         parentView.dispatchTouchEvent(e);
                     }
                 } else {
-                    boolean isMuted = VoIPService.getSharedInstance().isMicMute();
+                    boolean isMuted = voIPService.isMicMute();
                     setState(isMuted ? FragmentContextViewWavesDrawable.MUTE_BUTTON_STATE_MUTE : FragmentContextViewWavesDrawable.MUTE_BUTTON_STATE_UNMUTE);
                 }
             }

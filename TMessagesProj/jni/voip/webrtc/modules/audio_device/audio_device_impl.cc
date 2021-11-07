@@ -33,6 +33,8 @@
 #include "modules/audio_device/android/audio_device_template.h"
 #include "modules/audio_device/android/audio_manager.h"
 #include "modules/audio_device/android/audio_record_jni.h"
+#include "modules/audio_device/android/audio_screen_record_jni.h"
+#include "modules/audio_device/android/audio_merged_screen_record_jni.h"
 #include "modules/audio_device/android/audio_track_jni.h"
 #include "modules/audio_device/android/opensles_player.h"
 #include "modules/audio_device/android/opensles_recorder.h"
@@ -73,7 +75,7 @@ namespace webrtc {
 rtc::scoped_refptr<AudioDeviceModule> AudioDeviceModule::Create(
     AudioLayer audio_layer,
     TaskQueueFactory* task_queue_factory) {
-  RTC_LOG(INFO) << __FUNCTION__;
+  RTC_DLOG(INFO) << __FUNCTION__;
   return AudioDeviceModule::CreateForTest(audio_layer, task_queue_factory);
 }
 
@@ -81,7 +83,7 @@ rtc::scoped_refptr<AudioDeviceModule> AudioDeviceModule::Create(
 rtc::scoped_refptr<AudioDeviceModuleForTest> AudioDeviceModule::CreateForTest(
     AudioLayer audio_layer,
     TaskQueueFactory* task_queue_factory) {
-  RTC_LOG(INFO) << __FUNCTION__;
+  RTC_DLOG(INFO) << __FUNCTION__;
 
   // The "AudioDeviceModule::kWindowsCoreAudio2" audio layer has its own
   // dedicated factory method which should be used instead.
@@ -92,38 +94,37 @@ rtc::scoped_refptr<AudioDeviceModuleForTest> AudioDeviceModule::CreateForTest(
   }
 
   // Create the generic reference counted (platform independent) implementation.
-  rtc::scoped_refptr<AudioDeviceModuleImpl> audioDevice(
-      new rtc::RefCountedObject<AudioDeviceModuleImpl>(audio_layer,
-                                                       task_queue_factory));
+  auto audio_device = rtc::make_ref_counted<AudioDeviceModuleImpl>(
+      audio_layer, task_queue_factory);
 
   // Ensure that the current platform is supported.
-  if (audioDevice->CheckPlatform() == -1) {
+  if (audio_device->CheckPlatform() == -1) {
     return nullptr;
   }
 
   // Create the platform-dependent implementation.
-  if (audioDevice->CreatePlatformSpecificObjects() == -1) {
+  if (audio_device->CreatePlatformSpecificObjects() == -1) {
     return nullptr;
   }
 
   // Ensure that the generic audio buffer can communicate with the platform
   // specific parts.
-  if (audioDevice->AttachAudioBuffer() == -1) {
+  if (audio_device->AttachAudioBuffer() == -1) {
     return nullptr;
   }
 
-  return audioDevice;
+  return audio_device;
 }
 
 AudioDeviceModuleImpl::AudioDeviceModuleImpl(
     AudioLayer audio_layer,
     TaskQueueFactory* task_queue_factory)
     : audio_layer_(audio_layer), audio_device_buffer_(task_queue_factory) {
-  RTC_LOG(INFO) << __FUNCTION__;
+  RTC_DLOG(INFO) << __FUNCTION__;
 }
 
 int32_t AudioDeviceModuleImpl::CheckPlatform() {
-  RTC_LOG(INFO) << __FUNCTION__;
+  RTC_DLOG(INFO) << __FUNCTION__;
   // Ensure that the current platform is supported
   PlatformType platform(kPlatformNotSupported);
 #if defined(_WIN32)
@@ -211,6 +212,14 @@ int32_t AudioDeviceModuleImpl::CreatePlatformSpecificObjects() {
     // Java audio for both input and output audio.
     audio_device_.reset(new AudioDeviceTemplate<AudioRecordJni, AudioTrackJni>(
         audio_layer, audio_manager));
+  } else if (audio_layer == kAndroidScreenAudio) {
+    // Java audio for both input and output audio.
+    audio_device_.reset(new AudioDeviceTemplate<AudioScreenRecordJni, AudioTrackJni>(
+            audio_layer, audio_manager));
+  } else if (audio_layer == kAndroidMergedScreenAudio) {
+    // Java audio for both input and output audio.
+    audio_device_.reset(new AudioDeviceTemplate<AudioMergedScreenRecordJni, AudioTrackJni>(
+            audio_layer, audio_manager));
   } else if (audio_layer == kAndroidOpenSLESAudio) {
     // OpenSL ES based audio for both input and output audio.
     audio_device_.reset(
@@ -280,7 +289,8 @@ int32_t AudioDeviceModuleImpl::CreatePlatformSpecificObjects() {
 // iOS ADM implementation.
 #if defined(WEBRTC_IOS)
   if (audio_layer == kPlatformDefaultAudio) {
-    audio_device_.reset(new ios_adm::AudioDeviceIOS());
+    audio_device_.reset(
+        new ios_adm::AudioDeviceIOS(/*bypass_voice_processing=*/false));
     RTC_LOG(INFO) << "iPhone Audio APIs will be utilized.";
   }
 // END #if defined(WEBRTC_IOS)

@@ -48,7 +48,7 @@ public class DrawerLayoutAdapter extends RecyclerListView.SelectionAdapter {
         mContext = context;
         itemAnimator = animator;
         accountsShown = UserConfig.getActivatedAccountsCount() > 1 && MessagesController.getGlobalMainSettings().getBoolean("accountsShown", true);
-        Theme.createDialogsResources(context);
+        Theme.createCommonDialogResources(context);
         resetItems();
         try {
             hasGps = ApplicationLoader.applicationContext.getPackageManager().hasSystemFeature(PackageManager.FEATURE_LOCATION_GPS);
@@ -304,7 +304,7 @@ public class DrawerLayoutAdapter extends RecyclerListView.SelectionAdapter {
         items.add(new Item(8, LocaleController.getString("Settings", R.string.Settings), settingsIcon));
         items.add(null); // divider
         items.add(new Item(7, LocaleController.getString("InviteFriends", R.string.InviteFriends), inviteIcon));
-        items.add(new Item(9, LocaleController.getString("TelegramFAQ", R.string.TelegramFAQ), helpIcon));
+        items.add(new Item(13, LocaleController.getString("TelegramFeatures", R.string.TelegramFeatures), helpIcon));
     }
 
     public int getId(int position) {
@@ -345,7 +345,7 @@ public class DrawerLayoutAdapter extends RecyclerListView.SelectionAdapter {
         }
 
         public void bind(DrawerActionCell actionCell) {
-            actionCell.setTextAndIcon(text, icon);
+            actionCell.setTextAndIcon(id, text, icon);
         }
     }
 }

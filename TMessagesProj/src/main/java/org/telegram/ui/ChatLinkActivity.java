@@ -74,7 +74,7 @@ public class ChatLinkActivity extends BaseFragment implements NotificationCenter
     private boolean waitingForChatCreate;
     private boolean chatsLoaded;
 
-    private int currentChatId;
+    private long currentChatId;
 
     private int helpRow;
     private int createChatRow;
@@ -96,7 +96,7 @@ public class ChatLinkActivity extends BaseFragment implements NotificationCenter
 
         private int currentAccount = UserConfig.selectedAccount;
 
-        private static final String stickerSetName = "tg_placeholders";
+        private static final String stickerSetName = AndroidUtilities.STICKERS_PLACEHOLDER_PACK_NAME;
 
         public EmptyView(Context context) {
             super(context);
@@ -158,16 +158,16 @@ public class ChatLinkActivity extends BaseFragment implements NotificationCenter
         }
     }
 
-    public ChatLinkActivity(int chatId) {
+    public ChatLinkActivity(long chatId) {
         super();
 
         currentChatId = chatId;
-        currentChat = MessagesController.getInstance(currentAccount).getChat(chatId);
+        currentChat = getMessagesController().getChat(chatId);
         isChannel = ChatObject.isChannel(currentChat) && !currentChat.megagroup;
     }
 
     private void updateRows() {
-        currentChat = MessagesController.getInstance(currentAccount).getChat(currentChatId);
+        currentChat = getMessagesController().getChat(currentChatId);
         if (currentChat == null) {
             return;
         }
@@ -340,7 +340,7 @@ public class ChatLinkActivity extends BaseFragment implements NotificationCenter
                     showLinkAlert(chat, true);
                 } else {
                     Bundle args = new Bundle();
-                    args.putInt("chat_id", chat.id);
+                    args.putLong("chat_id", chat.id);
                     presentFragment(new ChatActivity(args));
                 }
                 return;
@@ -348,9 +348,8 @@ public class ChatLinkActivity extends BaseFragment implements NotificationCenter
             if (position == createChatRow) {
                 if (isChannel && info.linked_chat_id == 0) {
                     Bundle args = new Bundle();
-                    ArrayList<Integer> result = new ArrayList<>();
-                    result.add(getUserConfig().getClientUserId());
-                    args.putIntegerArrayList("result", result);
+                    long[] array = new long[]{getUserConfig().getClientUserId()};
+                    args.putLongArray("result", array);
                     args.putInt("chatType", ChatObject.CHAT_TYPE_MEGAGROUP);
                     GroupCreateFinalActivity activity = new GroupCreateFinalActivity(args);
                     activity.setDelegate(new GroupCreateFinalActivity.GroupCreateFinalActivityDelegate() {
@@ -360,7 +359,7 @@ public class ChatLinkActivity extends BaseFragment implements NotificationCenter
                         }
 
                         @Override
-                        public void didFinishChatCreation(GroupCreateFinalActivity fragment, int chatId) {
+                        public void didFinishChatCreation(GroupCreateFinalActivity fragment, long chatId) {
                             linkChat(getMessagesController().getChat(chatId), fragment);
                         }
 
@@ -407,7 +406,7 @@ public class ChatLinkActivity extends BaseFragment implements NotificationCenter
                                 }
                                 progressDialog[0] = null;
                                 info.linked_chat_id = 0;
-                                NotificationCenter.getInstance(currentAccount).postNotificationName(NotificationCenter.chatInfoDidLoad, info, 0, false);
+                                NotificationCenter.getInstance(currentAccount).postNotificationName(NotificationCenter.chatInfoDidLoad, info, 0, false, false);
                                 AndroidUtilities.runOnUIThread(() -> getMessagesController().loadFullChat(currentChatId, 0, true), 1000);
                                 if (!isChannel) {
                                     finishFragment();
@@ -499,10 +498,10 @@ public class ChatLinkActivity extends BaseFragment implements NotificationCenter
         frameLayout2.addView(textView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, (LocaleController.isRTL ? Gravity.RIGHT : Gravity.LEFT) | Gravity.TOP, (LocaleController.isRTL ? 21 : 76), 11, (LocaleController.isRTL ? 76 : 21), 0));
         frameLayout2.addView(messageTextView, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, (LocaleController.isRTL ? Gravity.RIGHT : Gravity.LEFT) | Gravity.TOP, 24, 57, 24, 9));
         avatarDrawable.setInfo(chat);
-        imageView.setImage(ImageLocation.getForChat(chat, false), "50_50", avatarDrawable, chat);
+        imageView.setForUserOrChat(chat, avatarDrawable);
         builder.setPositiveButton(LocaleController.getString("DiscussionLinkGroup", R.string.DiscussionLinkGroup), (dialogInterface, i) -> {
             if (chatFull.hidden_prehistory) {
-                MessagesController.getInstance(currentAccount).toogleChannelInvitesHistory(chat.id, false);
+                getMessagesController().toogleChannelInvitesHistory(chat.id, false);
             }
             linkChat(chat, null);
         });
@@ -515,9 +514,9 @@ public class ChatLinkActivity extends BaseFragment implements NotificationCenter
             return;
         }
         if (!ChatObject.isChannel(chat)) {
-            MessagesController.getInstance(currentAccount).convertToMegaGroup(getParentActivity(), chat.id, this, param -> {
+            getMessagesController().convertToMegaGroup(getParentActivity(), chat.id, this, param -> {
                 if (param != 0) {
-                    MessagesController.getInstance(currentAccount).toogleChannelInvitesHistory(param, false);
+                    getMessagesController().toogleChannelInvitesHistory(param, false);
                     linkChat(getMessagesController().getChat(param), createFragment);
                 }
             });
@@ -537,7 +536,7 @@ public class ChatLinkActivity extends BaseFragment implements NotificationCenter
                 progressDialog[0] = null;
             }
             info.linked_chat_id = chat.id;
-            NotificationCenter.getInstance(currentAccount).postNotificationName(NotificationCenter.chatInfoDidLoad, info, 0, false);
+            NotificationCenter.getInstance(currentAccount).postNotificationName(NotificationCenter.chatInfoDidLoad, info, 0, false, false);
             AndroidUtilities.runOnUIThread(() -> getMessagesController().loadFullChat(currentChatId, 0, true), 1000);
             if (createFragment != null) {
                 removeSelfFromStack();

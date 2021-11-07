@@ -1134,8 +1134,12 @@ public class FilterTabsView extends FrameLayout {
                 }
             }
             if (indicatorWidth != 0) {
+                canvas.save();
+                canvas.translate(listView.getTranslationX(), 0);
+                canvas.scale(listView.getScaleX(), 1f, listView.getPivotX() + listView.getX(), listView.getPivotY());
                 selectorDrawable.setBounds((int) indicatorX, height - AndroidUtilities.dpr(4), (int) (indicatorX + indicatorWidth), height);
                 selectorDrawable.draw(canvas);
+                canvas.restore();
             }
         }
         long newTime = SystemClock.elapsedRealtime();
@@ -1204,7 +1208,10 @@ public class FilterTabsView extends FrameLayout {
             additionalTabWidth = trueTabsWidth < width ? (width - trueTabsWidth) / tabs.size() : 0;
             if (prevWidth != additionalTabWidth) {
                 ignoreLayout = true;
+                RecyclerView.ItemAnimator animator = listView.getItemAnimator();
+                listView.setItemAnimator(null);
                 adapter.notifyDataSetChanged();
+                listView.setItemAnimator(animator);
                 ignoreLayout = false;
             }
             updateTabsWidths();
@@ -1335,7 +1342,7 @@ public class FilterTabsView extends FrameLayout {
         boolean changed = false;
         for (int a = 0, N = tabs.size(); a < N; a++) {
             Tab tab = tabs.get(a);
-            if (tab.counter == delegate.getTabCounter(tab.id)) {
+            if (tab.counter == delegate.getTabCounter(tab.id) || delegate.getTabCounter(tab.id) < 0) {
                 continue;
             }
             changed = true;
@@ -1364,7 +1371,7 @@ public class FilterTabsView extends FrameLayout {
             return;
         }
         Tab tab = tabs.get(position);
-        if (tab.counter == delegate.getTabCounter(tab.id)) {
+        if (tab.counter == delegate.getTabCounter(tab.id) || delegate.getTabCounter(tab.id) < 0) {
             return;
         }
         listView.invalidateViews();
@@ -1524,5 +1531,9 @@ public class FilterTabsView extends FrameLayout {
             viewHolder.itemView.setPressed(false);
             viewHolder.itemView.setBackground(null);
         }
+    }
+
+    public RecyclerListView getListView() {
+        return listView;
     }
 }

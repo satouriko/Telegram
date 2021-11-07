@@ -27,7 +27,6 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.ContactsController;
-import org.telegram.messenger.ImageLocation;
 import org.telegram.messenger.LocaleController;
 import org.telegram.messenger.R;
 import org.telegram.messenger.UserConfig;
@@ -40,7 +39,6 @@ import org.telegram.ui.Components.CombinedDrawable;
 import org.telegram.ui.Components.LayoutHelper;
 import org.telegram.ui.Components.RecyclerListView;
 
-import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -49,7 +47,6 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Calendar;
-import java.util.Date;
 import java.util.GregorianCalendar;
 import java.util.Locale;
 import java.util.regex.Matcher;
@@ -78,8 +75,8 @@ public class FiltersView extends RecyclerListView {
     private ArrayList<MediaFilterData> oldItems = new ArrayList<>();
     LinearLayoutManager layoutManager;
 
-    public FiltersView(Context context) {
-        super(context);
+    public FiltersView(Context context, Theme.ResourcesProvider resourcesProvider) {
+        super(context, resourcesProvider);
         layoutManager = new LinearLayoutManager(context) {
             @Override
             public boolean supportsPredictiveItemAnimations() {
@@ -202,7 +199,7 @@ public class FiltersView extends RecyclerListView {
         setWillNotDraw(false);
         setHideIfEmpty(false);
         setSelectorRadius(AndroidUtilities.dp(28));
-        setSelectorDrawableColor(Theme.getColor(Theme.key_listSelector));
+        setSelectorDrawableColor(getThemedColor(Theme.key_listSelector));
     }
 
 
@@ -218,13 +215,13 @@ public class FiltersView extends RecyclerListView {
         return usersFilters.get(i);
     }
 
-    public void setUsersAndDates(ArrayList<TLObject> localUsers, ArrayList<DateData> dates) {
+    public void setUsersAndDates(ArrayList<Object> localUsers, ArrayList<DateData> dates, boolean archive) {
         oldItems.clear();
         oldItems.addAll(usersFilters);
         usersFilters.clear();
         if (localUsers != null) {
             for (int i = 0; i < localUsers.size(); i++) {
-                TLObject object = localUsers.get(i);
+                Object object = localUsers.get(i);
                 if (object instanceof TLRPC.User) {
                     TLRPC.User user = (TLRPC.User) object;
                     String title;
@@ -255,6 +252,10 @@ public class FiltersView extends RecyclerListView {
                 data.setDate(dateData);
                 usersFilters.add(data);
             }
+        }
+        if (archive) {
+            FiltersView.MediaFilterData filterData = new FiltersView.MediaFilterData(R.drawable.chats_archive, R.drawable.chats_archive, LocaleController.getString("ArchiveSearchFilter", R.string.ArchiveSearchFilter), null, FiltersView.FILTER_TYPE_ARCHIVE);
+            usersFilters.add(filterData);
         }
         if (getAdapter() != null) {
             UpdateCallback updateCallback = new UpdateCallback(getAdapter());
@@ -618,7 +619,7 @@ public class FiltersView extends RecyclerListView {
                 ((FilterView) view).updateColors();
             }
         }
-        setSelectorDrawableColor(Theme.getColor(Theme.key_listSelector));
+        setSelectorDrawableColor(getThemedColor(Theme.key_listSelector));
     }
 
     private class Adapter extends RecyclerListView.SelectionAdapter {
@@ -626,7 +627,7 @@ public class FiltersView extends RecyclerListView {
         @NonNull
         @Override
         public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-            ViewHolder holder = new ViewHolder(new FilterView(parent.getContext()));
+            ViewHolder holder = new ViewHolder(new FilterView(parent.getContext(), resourcesProvider));
             RecyclerView.LayoutParams lp = new RecyclerView.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, AndroidUtilities.dp(32));
             lp.topMargin = AndroidUtilities.dp(6);
             holder.itemView.setLayoutParams(lp);
@@ -674,9 +675,10 @@ public class FiltersView extends RecyclerListView {
                     if (oldItem.chat instanceof TLRPC.Chat && newItem.chat instanceof TLRPC.Chat) {
                         return ((TLRPC.Chat) oldItem.chat).id == ((TLRPC.Chat) newItem.chat).id;
                     }
-                }
-                if (oldItem.filterType == FILTER_TYPE_DATE) {
+                } else if (oldItem.filterType == FILTER_TYPE_DATE) {
                     return oldItem.title.equals(newItem.title);
+                } else if (oldItem.filterType == FILTER_TYPE_ARCHIVE) {
+                    return true;
                 }
             }
             return false;
@@ -690,12 +692,16 @@ public class FiltersView extends RecyclerListView {
 
     public static class FilterView extends FrameLayout {
 
+        private final Theme.ResourcesProvider resourcesProvider;
+
         BackupImageView avatarImageView;
         TextView titleView;
-        Drawable thumbDrawable;
+        CombinedDrawable thumbDrawable;
+        MediaFilterData data;
 
-        public FilterView(Context context) {
+        public FilterView(Context context, Theme.ResourcesProvider resourcesProvider) {
             super(context);
+            this.resourcesProvider = resourcesProvider;
             avatarImageView = new BackupImageView(context);
             addView(avatarImageView, LayoutHelper.createFrame(32, 32));
 
@@ -706,41 +712,61 @@ public class FiltersView extends RecyclerListView {
         }
 
         private void updateColors() {
-            setBackground(Theme.createRoundRectDrawable(AndroidUtilities.dp(28), Theme.getColor(Theme.key_groupcreate_spanBackground)));
-            titleView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
+            setBackground(Theme.createRoundRectDrawable(AndroidUtilities.dp(28), getThemedColor(Theme.key_groupcreate_spanBackground)));
+            titleView.setTextColor(getThemedColor(Theme.key_windowBackgroundWhiteBlackText));
             if (thumbDrawable != null) {
-                Theme.setCombinedDrawableColor(thumbDrawable, Theme.getColor(Theme.key_avatar_backgroundBlue), false);
-                Theme.setCombinedDrawableColor(thumbDrawable, Theme.getColor(Theme.key_avatar_actionBarIconBlue), true);
+                if (data.filterType == FILTER_TYPE_ARCHIVE) {
+                    Theme.setCombinedDrawableColor(thumbDrawable, getThemedColor(Theme.key_avatar_backgroundArchived), false);
+                    Theme.setCombinedDrawableColor(thumbDrawable, getThemedColor(Theme.key_avatar_actionBarIconBlue), true);
+                } else {
+                    Theme.setCombinedDrawableColor(thumbDrawable, getThemedColor(Theme.key_avatar_backgroundBlue), false);
+                    Theme.setCombinedDrawableColor(thumbDrawable, getThemedColor(Theme.key_avatar_actionBarIconBlue), true);
+                }
             }
         }
 
         public void setData(MediaFilterData data) {
+            this.data = data;
             avatarImageView.getImageReceiver().clearImage();
+            if (data.filterType == FILTER_TYPE_ARCHIVE) {
+                thumbDrawable = Theme.createCircleDrawableWithIcon(AndroidUtilities.dp(32), R.drawable.chats_archive);
+                thumbDrawable.setIconSize(AndroidUtilities.dp(16), AndroidUtilities.dp(16));
+                Theme.setCombinedDrawableColor(thumbDrawable, getThemedColor(Theme.key_avatar_backgroundArchived), false);
+                Theme.setCombinedDrawableColor(thumbDrawable, getThemedColor(Theme.key_avatar_actionBarIconBlue), true);
+                avatarImageView.setImageDrawable(thumbDrawable);
+                titleView.setText(data.title);
+                return;
+            }
             thumbDrawable = Theme.createCircleDrawableWithIcon(AndroidUtilities.dp(32), data.iconResFilled);
-            Theme.setCombinedDrawableColor(thumbDrawable, Theme.getColor(Theme.key_avatar_backgroundBlue), false);
-            Theme.setCombinedDrawableColor(thumbDrawable, Theme.getColor(Theme.key_avatar_actionBarIconBlue), true);
+            Theme.setCombinedDrawableColor(thumbDrawable, getThemedColor(Theme.key_avatar_backgroundBlue), false);
+            Theme.setCombinedDrawableColor(thumbDrawable, getThemedColor(Theme.key_avatar_actionBarIconBlue), true);
             if (data.filterType == FILTER_TYPE_CHAT) {
                 if (data.chat instanceof TLRPC.User) {
                     TLRPC.User user = (TLRPC.User) data.chat;
                     if (UserConfig.getInstance(UserConfig.selectedAccount).getCurrentUser().id == user.id) {
                         CombinedDrawable combinedDrawable = Theme.createCircleDrawableWithIcon(AndroidUtilities.dp(32), R.drawable.chats_saved);
                         combinedDrawable.setIconSize(AndroidUtilities.dp(16), AndroidUtilities.dp(16));
-                        Theme.setCombinedDrawableColor(combinedDrawable, Theme.getColor(Theme.key_avatar_backgroundSaved), false);
-                        Theme.setCombinedDrawableColor(combinedDrawable, Theme.getColor(Theme.key_avatar_actionBarIconBlue), true);
+                        Theme.setCombinedDrawableColor(combinedDrawable, getThemedColor(Theme.key_avatar_backgroundSaved), false);
+                        Theme.setCombinedDrawableColor(combinedDrawable, getThemedColor(Theme.key_avatar_actionBarIconBlue), true);
                         avatarImageView.setImageDrawable(combinedDrawable);
                     } else {
                         avatarImageView.getImageReceiver().setRoundRadius(AndroidUtilities.dp(16));
-                        avatarImageView.getImageReceiver().setImage(ImageLocation.getForUser(user, false), "50_50", thumbDrawable, null, user, 0);
+                        avatarImageView.getImageReceiver().setForUserOrChat(user, thumbDrawable);
                     }
                 } else if (data.chat instanceof TLRPC.Chat) {
                     TLRPC.Chat chat = (TLRPC.Chat) data.chat;
                     avatarImageView.getImageReceiver().setRoundRadius(AndroidUtilities.dp(16));
-                    avatarImageView.getImageReceiver().setImage(ImageLocation.getForChat(chat, false), "50_50", thumbDrawable, null, chat, 0);
+                    avatarImageView.getImageReceiver().setForUserOrChat(chat, thumbDrawable);
                 }
             } else {
                 avatarImageView.setImageDrawable(thumbDrawable);
             }
             titleView.setText(data.title);
+        }
+
+        private int getThemedColor(String key) {
+            Integer color = resourcesProvider != null ? resourcesProvider.getColor(key) : null;
+            return color != null ? color : Theme.getColor(key);
         }
     }
 
@@ -776,7 +802,6 @@ public class FiltersView extends RecyclerListView {
         public void setUser(TLObject chat) {
             this.chat = chat;
         }
-
 
         public boolean isSameType(MediaFilterData filterData) {
             if (filterType == filterData.filterType) {

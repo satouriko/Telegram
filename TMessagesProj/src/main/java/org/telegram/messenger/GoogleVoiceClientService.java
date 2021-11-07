@@ -34,7 +34,7 @@ public class GoogleVoiceClientService extends SearchActionVerificationClientServ
                 if (!TextUtils.isEmpty(text)) {
                     String contactUri = intent.getStringExtra("com.google.android.voicesearch.extra.RECIPIENT_CONTACT_URI");
                     String id = intent.getStringExtra("com.google.android.voicesearch.extra.RECIPIENT_CONTACT_CHAT_ID");
-                    int uid = Integer.parseInt(id);
+                    long uid = Long.parseLong(id);
                     TLRPC.User user = MessagesController.getInstance(currentAccount).getUser(uid);
                     if (user == null) {
                         user = MessagesStorage.getInstance(currentAccount).getUserSync(uid);
@@ -44,7 +44,7 @@ public class GoogleVoiceClientService extends SearchActionVerificationClientServ
                     }
                     if (user != null) {
                         ContactsController.getInstance(currentAccount).markAsContacted(contactUri);
-                        SendMessagesHelper.getInstance(currentAccount).sendMessage(text, user.id, null, null, null, true, null, null, null, true, 0);
+                        SendMessagesHelper.getInstance(currentAccount).sendMessage(text, user.id, null, null, null, true, null, null, null, true, 0, null);
                     }
                 }
             } catch (Exception e) {

@@ -7,6 +7,7 @@ import android.animation.ObjectAnimator;
 import android.animation.ValueAnimator;
 import android.annotation.SuppressLint;
 import android.content.Context;
+import android.content.res.Configuration;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.PorterDuff;
@@ -23,7 +24,6 @@ import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.View;
-import android.view.ViewGroup;
 import android.view.ViewTreeObserver;
 import android.view.inputmethod.EditorInfo;
 import android.widget.FrameLayout;
@@ -32,8 +32,6 @@ import android.widget.ImageView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
-
-import com.google.android.exoplayer2.util.Log;
 
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.LocaleController;
@@ -49,14 +47,14 @@ public class UsersAlertBase extends BottomSheet {
 
     protected FrameLayout frameLayout;
     protected RecyclerListView listView;
-    protected RecyclerListView.SelectionAdapter searchListViewAdapter;
-    protected RecyclerListView.SelectionAdapter listViewAdapter;
+    protected RecyclerView.Adapter searchListViewAdapter;
+    protected RecyclerView.Adapter listViewAdapter;
     protected Drawable shadowDrawable;
     protected View shadow;
     protected AnimatorSet shadowAnimation;
     protected StickerEmptyView emptyView;
     protected FlickerLoadingView flickerLoadingView;
-    private SearchField searchView;
+    protected SearchField searchView;
 
     private RectF rect = new RectF();
 
@@ -66,6 +64,7 @@ public class UsersAlertBase extends BottomSheet {
     private int backgroundColor;
 
     protected boolean needSnapToTop = true;
+    protected boolean isEmptyViewVisible = true;
 
     protected String keyScrollUp = Theme.key_sheet_scrollUp;
     protected String keyListSelector = Theme.key_listSelector;
@@ -83,8 +82,8 @@ public class UsersAlertBase extends BottomSheet {
     protected final FillLastLinearLayoutManager layoutManager;
 
 
-    public UsersAlertBase(Context context, boolean needFocus, int account) {
-        super(context, needFocus);
+    public UsersAlertBase(Context context, boolean needFocus, int account, Theme.ResourcesProvider resourcesProvider) {
+        super(context, needFocus, resourcesProvider);
         updateColorKeys();
         setDimBehindAlpha(75);
 
@@ -121,7 +120,7 @@ public class UsersAlertBase extends BottomSheet {
         listView = new RecyclerListView(context) {
             @Override
             protected boolean allowSelectChildAtPosition(float x, float y) {
-                return y >= scrollOffsetY + AndroidUtilities.dp(48) + (Build.VERSION.SDK_INT >= 21 ? AndroidUtilities.statusBarHeight : 0);
+                return isAllowSelectChildAtPosition(x, y);
             }
 
             @Override
@@ -136,7 +135,7 @@ public class UsersAlertBase extends BottomSheet {
                 if (getAdapter() == null) {
                     return false;
                 }
-                return getAdapter().getItemCount() <= 2;
+                return isEmptyViewVisible && getAdapter().getItemCount() <= 2;
             }
         };
         listView.setTag(13);
@@ -186,8 +185,18 @@ public class UsersAlertBase extends BottomSheet {
         listView.setAnimateEmptyView(true, 0);
     }
 
+    @Override
+    public void onConfigurationChanged(Configuration newConfig) {
+        super.onConfigurationChanged(newConfig);
+        AndroidUtilities.statusBarHeight = AndroidUtilities.getStatusBarHeight(getContext());
+    }
+
     protected ContainerView createContainerView(Context context) {
         return new ContainerView(context);
+    }
+
+    protected boolean isAllowSelectChildAtPosition(float x, float y) {
+        return y >= AndroidUtilities.dp(58) + (Build.VERSION.SDK_INT >= 21 ? AndroidUtilities.statusBarHeight : 0);
     }
 
     protected void updateColorKeys() {
@@ -195,13 +204,13 @@ public class UsersAlertBase extends BottomSheet {
     }
 
     @SuppressWarnings("FieldCanBeLocal")
-    private class SearchField extends FrameLayout {
+    protected class SearchField extends FrameLayout {
 
         private final View searchBackground;
         private final ImageView searchIconImageView;
         private final ImageView clearSearchImageView;
         private final CloseProgressDrawable2 progressDrawable;
-        private EditTextBoldCursor searchEditText;
+        protected EditTextBoldCursor searchEditText;
 
         public SearchField(Context context) {
             super(context);
@@ -311,6 +320,11 @@ public class UsersAlertBase extends BottomSheet {
             onSearchViewTouched(ev, searchEditText);
             return super.onInterceptTouchEvent(ev);
         }
+
+        public void closeSearch() {
+            clearSearchImageView.callOnClick();
+            AndroidUtilities.hideKeyboard(searchEditText);
+        }
     }
 
     protected void onSearchViewTouched(MotionEvent ev, EditTextBoldCursor searchEditText) {
@@ -374,7 +388,7 @@ public class UsersAlertBase extends BottomSheet {
     }
 
     @SuppressLint("NewApi")
-    private void updateLayout() {
+    protected void updateLayout() {
         if (listView.getChildCount() <= 0) {
             return;
         }
@@ -394,11 +408,16 @@ public class UsersAlertBase extends BottomSheet {
             runShadowAnimation(true);
         }
         if (scrollOffsetY != newOffset) {
-            listView.setTopGlowOffset(scrollOffsetY = (int) (newOffset));
-            frameLayout.setTranslationY(scrollOffsetY);
-            emptyView.setTranslationY(scrollOffsetY);
-            containerView.invalidate();
+            scrollOffsetY = newOffset;
+            setTranslationY(newOffset);
         }
+    }
+
+    protected void setTranslationY(int newOffset) {
+        listView.setTopGlowOffset(newOffset);
+        frameLayout.setTranslationY(newOffset);
+        emptyView.setTranslationY(newOffset);
+        containerView.invalidate();
     }
 
     private void runShadowAnimation(final boolean show) {

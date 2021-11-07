@@ -12,6 +12,7 @@ import android.app.Activity;
 import android.app.ActivityManager;
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.content.pm.PackageInfo;
 import android.os.Build;
 import android.os.Environment;
 import android.os.SystemClock;
@@ -22,6 +23,9 @@ import android.util.SparseArray;
 import org.json.JSONObject;
 import org.telegram.tgnet.ConnectionsManager;
 import org.telegram.tgnet.SerializedData;
+import org.telegram.ui.Components.SharedMediaLayout;
+import org.telegram.ui.Components.SwipeGestureSettingsView;
+import org.telegram.tgnet.TLRPC;
 
 import java.io.File;
 import java.io.RandomAccessFile;
@@ -35,6 +39,9 @@ public class SharedConfig {
 
     public static String pushString = "";
     public static String pushStringStatus = "";
+    public static long pushStringGetTimeStart;
+    public static long pushStringGetTimeEnd;
+    public static boolean pushStatSent;
     public static byte[] pushAuthKey;
     public static byte[] pushAuthKeyId;
 
@@ -58,10 +65,12 @@ public class SharedConfig {
     public static boolean loopStickers;
     public static int keepMedia = 2;
     public static int lastKeepMediaCheckTime;
+    public static int lastLogsCheckTime;
     public static int searchMessagesAsListHintShows;
     public static int textSelectionHintShows;
     public static int scheduledOrNoSoundHintShows;
     public static int lockRecordAudioVideoHint;
+    public static boolean forwardingOptionsHintShown;
     public static boolean searchMessagesAsListUsed;
     public static boolean stickersReorderingHintUsed;
     public static boolean disableVoiceAudioEffects;
@@ -94,6 +103,7 @@ public class SharedConfig {
     public static boolean saveStreamMedia = true;
     public static boolean smoothKeyboard = true;
     public static boolean pauseMusicOnRecord = true;
+    public static boolean noiseSupression;
     public static boolean noStatusBar = true;
     public static boolean sortContactsByName;
     public static boolean sortFilesByName;
@@ -107,13 +117,25 @@ public class SharedConfig {
     public static int fontSize = 16;
     public static int bubbleRadius = 10;
     public static int ivFontSize = 16;
+    public static int messageSeenHintCount;
+    public static int emojiInteractionsHintCount;
+    public static int dayNightThemeSwitchHintCount;
+
+    public static TLRPC.TL_help_appUpdate pendingAppUpdate;
+    public static int pendingAppUpdateBuildVersion;
+    public static long lastUpdateCheckTime;
+
     private static int devicePerformanceClass;
 
     public static boolean drawDialogIcons;
     public static boolean useThreeLinesLayout;
     public static boolean archiveHidden;
 
+    private static int chatSwipeAction;
+
     public static int distanceSystemType;
+    public static int mediaColumnsCount = 3;
+    public static int fastScrollHintCount = 3;
 
     static {
         loadConfig();
@@ -177,6 +199,7 @@ public class SharedConfig {
                 editor.putBoolean("useFingerprint", useFingerprint);
                 editor.putBoolean("allowScreenCapture", allowScreenCapture);
                 editor.putString("pushString2", pushString);
+                editor.putBoolean("pushStatSent", pushStatSent);
                 editor.putString("pushAuthKey", pushAuthKey != null ? Base64.encodeToString(pushAuthKey, Base64.DEFAULT) : "");
                 editor.putInt("lastLocalId", lastLocalId);
                 editor.putString("passportConfigJson", passportConfigJson);
@@ -185,9 +208,26 @@ public class SharedConfig {
                 editor.putBoolean("sortFilesByName", sortFilesByName);
                 editor.putInt("textSelectionHintShows", textSelectionHintShows);
                 editor.putInt("scheduledOrNoSoundHintShows", scheduledOrNoSoundHintShows);
+                editor.putBoolean("forwardingOptionsHintShown", forwardingOptionsHintShown);
                 editor.putInt("lockRecordAudioVideoHint", lockRecordAudioVideoHint);
-                editor.putBoolean("disableVoiceAudioEffects", disableVoiceAudioEffects);
                 editor.putString("storageCacheDir", !TextUtils.isEmpty(storageCacheDir) ? storageCacheDir : "");
+
+                if (pendingAppUpdate != null) {
+                    try {
+                        SerializedData data = new SerializedData(pendingAppUpdate.getObjectSize());
+                        pendingAppUpdate.serializeToStream(data);
+                        String str = Base64.encodeToString(data.toByteArray(), Base64.DEFAULT);
+                        editor.putString("appUpdate", str);
+                        editor.putInt("appUpdateBuild", pendingAppUpdateBuildVersion);
+                        data.cleanup();
+                    } catch (Exception ignore) {
+
+                    }
+                } else {
+                    editor.remove("appUpdate");
+                }
+                editor.putLong("appUpdateCheckTime", lastUpdateCheckTime);
+
                 editor.commit();
             } catch (Exception e) {
                 FileLog.e(e);
@@ -224,6 +264,7 @@ public class SharedConfig {
             allowScreenCapture = preferences.getBoolean("allowScreenCapture", false);
             lastLocalId = preferences.getInt("lastLocalId", -210000);
             pushString = preferences.getString("pushString2", "");
+            pushStatSent = preferences.getBoolean("pushStatSent", false);
             passportConfigJson = preferences.getString("passportConfigJson", "");
             passportConfigHash = preferences.getInt("passportConfigHash", 0);
             storageCacheDir = preferences.getString("storageCacheDir", null);
@@ -241,6 +282,43 @@ public class SharedConfig {
                 passcodeSalt = Base64.decode(passcodeSaltString, Base64.DEFAULT);
             } else {
                 passcodeSalt = new byte[0];
+            }
+            lastUpdateCheckTime = preferences.getLong("appUpdateCheckTime", System.currentTimeMillis());
+            try {
+                String update = preferences.getString("appUpdate", null);
+                if (update != null) {
+                    pendingAppUpdateBuildVersion = preferences.getInt("appUpdateBuild", BuildVars.BUILD_VERSION);
+                    byte[] arr = Base64.decode(update, Base64.DEFAULT);
+                    if (arr != null) {
+                        SerializedData data = new SerializedData(arr);
+                        pendingAppUpdate = (TLRPC.TL_help_appUpdate) TLRPC.help_AppUpdate.TLdeserialize(data, data.readInt32(false), false);
+                        data.cleanup();
+                    }
+                }
+                if (pendingAppUpdate != null) {
+                    long updateTime = 0;
+                    int updateVersion = 0;
+                    String updateVersionString = null;
+                    try {
+                        PackageInfo packageInfo = ApplicationLoader.applicationContext.getPackageManager().getPackageInfo(ApplicationLoader.applicationContext.getPackageName(), 0);
+                        updateVersion = packageInfo.versionCode;
+                        updateVersionString = packageInfo.versionName;
+                    } catch (Exception e) {
+                        FileLog.e(e);
+                    }
+                    if (updateVersion == 0) {
+                        updateVersion = BuildVars.BUILD_VERSION;
+                    }
+                    if (updateVersionString == null) {
+                        updateVersionString = BuildVars.BUILD_VERSION_STRING;
+                    }
+                    if (pendingAppUpdateBuildVersion != updateVersion || pendingAppUpdate.version == null || updateVersionString.compareTo(pendingAppUpdate.version) >= 0) {
+                        pendingAppUpdate = null;
+                        AndroidUtilities.runOnUIThread(SharedConfig::saveConfig);
+                    }
+                }
+            } catch (Exception e) {
+                FileLog.e(e);
             }
 
             preferences = ApplicationLoader.applicationContext.getSharedPreferences("mainconfig", Activity.MODE_PRIVATE);
@@ -265,7 +343,7 @@ public class SharedConfig {
             streamMedia = preferences.getBoolean("streamMedia", true);
             saveStreamMedia = preferences.getBoolean("saveStreamMedia", true);
             smoothKeyboard = preferences.getBoolean("smoothKeyboard2", true);
-            pauseMusicOnRecord = preferences.getBoolean("pauseMusicOnRecord", true);
+            pauseMusicOnRecord = preferences.getBoolean("pauseMusicOnRecord", false);
             streamAllVideo = preferences.getBoolean("streamAllVideo", BuildVars.DEBUG_VERSION);
             streamMkv = preferences.getBoolean("streamMkv", false);
             suggestStickers = preferences.getInt("suggestStickers", 0);
@@ -281,13 +359,23 @@ public class SharedConfig {
             keepMedia = preferences.getInt("keep_media", 2);
             noStatusBar = preferences.getBoolean("noStatusBar", true);
             lastKeepMediaCheckTime = preferences.getInt("lastKeepMediaCheckTime", 0);
+            lastLogsCheckTime = preferences.getInt("lastLogsCheckTime", 0);
             searchMessagesAsListHintShows = preferences.getInt("searchMessagesAsListHintShows", 0);
             searchMessagesAsListUsed = preferences.getBoolean("searchMessagesAsListUsed", false);
             stickersReorderingHintUsed = preferences.getBoolean("stickersReorderingHintUsed", false);
             textSelectionHintShows = preferences.getInt("textSelectionHintShows", 0);
             scheduledOrNoSoundHintShows = preferences.getInt("scheduledOrNoSoundHintShows", 0);
+            forwardingOptionsHintShown = preferences.getBoolean("forwardingOptionsHintShown", false);
             lockRecordAudioVideoHint = preferences.getInt("lockRecordAudioVideoHint", 0);
             disableVoiceAudioEffects = preferences.getBoolean("disableVoiceAudioEffects", false);
+            noiseSupression = preferences.getBoolean("noiseSupression", false);
+            chatSwipeAction = preferences.getInt("ChatSwipeAction", -1);
+            messageSeenHintCount = preferences.getInt("messageSeenCount", 3);
+            emojiInteractionsHintCount = preferences.getInt("emojiInteractionsHintCount", 3);
+            dayNightThemeSwitchHintCount = preferences.getInt("dayNightThemeSwitchHintCount", 3);
+            mediaColumnsCount = preferences.getInt("mediaColumnsCount", 3);
+            fastScrollHintCount = preferences.getInt("fastScrollHintCount", 3);
+
             preferences = ApplicationLoader.applicationContext.getSharedPreferences("Notifications", Activity.MODE_PRIVATE);
             showNotificationsForAllAccounts = preferences.getBoolean("AllAccounts", true);
 
@@ -296,9 +384,9 @@ public class SharedConfig {
     }
 
     public static void increaseBadPasscodeTries() {
-        SharedConfig.badPasscodeTries++;
+        badPasscodeTries++;
         if (badPasscodeTries >= 3) {
-            switch (SharedConfig.badPasscodeTries) {
+            switch (badPasscodeTries) {
                 case 3:
                     passcodeRetryInMs = 5000;
                     break;
@@ -318,7 +406,7 @@ public class SharedConfig {
                     passcodeRetryInMs = 30000;
                     break;
             }
-            SharedConfig.lastUptimeMillis = SystemClock.elapsedRealtime();
+            lastUptimeMillis = SystemClock.elapsedRealtime();
         }
         saveConfig();
     }
@@ -350,6 +438,46 @@ public class SharedConfig {
             }
         }
         return passportConfigMap;
+    }
+
+    public static boolean isAppUpdateAvailable() {
+        if (pendingAppUpdate == null || pendingAppUpdate.document == null || !BuildVars.isStandaloneApp()) {
+            return false;
+        }
+        int currentVersion;
+        try {
+            PackageInfo pInfo = ApplicationLoader.applicationContext.getPackageManager().getPackageInfo(ApplicationLoader.applicationContext.getPackageName(), 0);
+            currentVersion = pInfo.versionCode;
+        } catch (Exception e) {
+            FileLog.e(e);
+            currentVersion = BuildVars.BUILD_VERSION;
+        }
+        return pendingAppUpdateBuildVersion == currentVersion;
+    }
+
+    public static boolean setNewAppVersionAvailable(TLRPC.TL_help_appUpdate update) {
+        String updateVersionString = null;
+        int versionCode = 0;
+        try {
+            PackageInfo packageInfo = ApplicationLoader.applicationContext.getPackageManager().getPackageInfo(ApplicationLoader.applicationContext.getPackageName(), 0);
+            versionCode = packageInfo.versionCode;
+            updateVersionString = packageInfo.versionName;
+        } catch (Exception e) {
+            FileLog.e(e);
+        }
+        if (versionCode == 0) {
+            versionCode = BuildVars.BUILD_VERSION;
+        }
+        if (updateVersionString == null) {
+            updateVersionString = BuildVars.BUILD_VERSION_STRING;
+        }
+        if (update.version == null || updateVersionString.compareTo(update.version) >= 0) {
+            return false;
+        }
+        pendingAppUpdate = update;
+        pendingAppUpdateBuildVersion = versionCode;
+        saveConfig();
+        return true;
     }
 
     public static boolean checkPasscode(String passcode) {
@@ -405,6 +533,10 @@ public class SharedConfig {
         textSelectionHintShows = 0;
         scheduledOrNoSoundHintShows = 0;
         lockRecordAudioVideoHint = 0;
+        forwardingOptionsHintShown = false;
+        messageSeenHintCount = 3;
+        emojiInteractionsHintCount = 3;
+        dayNightThemeSwitchHintCount = 3;
         saveConfig();
     }
 
@@ -416,16 +548,16 @@ public class SharedConfig {
         editor.commit();
     }
 
-    public static void setSearchMessagesAsListUsed(boolean searchMessagesAsListUsed) {
-        SharedConfig.searchMessagesAsListUsed = searchMessagesAsListUsed;
+    public static void setSearchMessagesAsListUsed(boolean value) {
+        searchMessagesAsListUsed = value;
         SharedPreferences preferences = MessagesController.getGlobalMainSettings();
         SharedPreferences.Editor editor = preferences.edit();
         editor.putBoolean("searchMessagesAsListUsed", searchMessagesAsListUsed);
         editor.commit();
     }
 
-    public static void setStickersReorderingHintUsed(boolean stickersReorderingHintUsed) {
-        SharedConfig.stickersReorderingHintUsed = stickersReorderingHintUsed;
+    public static void setStickersReorderingHintUsed(boolean value) {
+        stickersReorderingHintUsed = value;
         SharedPreferences preferences = MessagesController.getGlobalMainSettings();
         SharedPreferences.Editor editor = preferences.edit();
         editor.putBoolean("stickersReorderingHintUsed", stickersReorderingHintUsed);
@@ -450,6 +582,14 @@ public class SharedConfig {
         SharedPreferences preferences = MessagesController.getGlobalMainSettings();
         SharedPreferences.Editor editor = preferences.edit();
         editor.putInt("scheduledOrNoSoundHintShows", ++scheduledOrNoSoundHintShows);
+        editor.commit();
+    }
+
+    public static void forwardingOptionsHintHintShowed() {
+        SharedPreferences preferences = MessagesController.getGlobalMainSettings();
+        SharedPreferences.Editor editor = preferences.edit();
+        forwardingOptionsHintShown = true;
+        editor.putBoolean("forwardingOptionsHintShown", forwardingOptionsHintShown);
         editor.commit();
     }
 
@@ -489,6 +629,31 @@ public class SharedConfig {
         editor.commit();
     }
 
+    public static void checkLogsToDelete() {
+        if (!BuildVars.LOGS_ENABLED) {
+            return;
+        }
+        int time = (int) (System.currentTimeMillis() / 1000);
+        if (Math.abs(time - lastLogsCheckTime) < 60 * 60) {
+            return;
+        }
+        lastLogsCheckTime = time;
+        Utilities.cacheClearQueue.postRunnable(() -> {
+            long currentTime = time - 60 * 60 * 24 * 10;
+            try {
+                File sdCard = ApplicationLoader.applicationContext.getExternalFilesDir(null);
+                File dir = new File(sdCard.getAbsolutePath() + "/logs");
+                Utilities.clearDir(dir.getAbsolutePath(), 0, currentTime, false);
+            } catch (Throwable e) {
+                FileLog.e(e);
+            }
+            SharedPreferences preferences = MessagesController.getGlobalMainSettings();
+            SharedPreferences.Editor editor = preferences.edit();
+            editor.putInt("lastLogsCheckTime", lastLogsCheckTime);
+            editor.commit();
+        });
+    }
+
     public static void checkKeepMedia() {
         int time = (int) (System.currentTimeMillis() / 1000);
         if (Math.abs(time - lastKeepMediaCheckTime) < 60 * 60) {
@@ -496,7 +661,7 @@ public class SharedConfig {
         }
         lastKeepMediaCheckTime = time;
         File cacheDir = FileLoader.checkDirectory(FileLoader.MEDIA_DIR_CACHE);
-        Utilities.globalQueue.postRunnable(() -> {
+        Utilities.cacheClearQueue.postRunnable(() -> {
             if (keepMedia != 2) {
                 int days;
                 if (keepMedia == 0) {
@@ -540,6 +705,14 @@ public class SharedConfig {
         SharedPreferences preferences = MessagesController.getGlobalMainSettings();
         SharedPreferences.Editor editor = preferences.edit();
         editor.putBoolean("disableVoiceAudioEffects", disableVoiceAudioEffects);
+        editor.commit();
+    }
+
+    public static void toggleNoiseSupression() {
+        noiseSupression = !noiseSupression;
+        SharedPreferences preferences = MessagesController.getGlobalMainSettings();
+        SharedPreferences.Editor editor = preferences.edit();
+        editor.putBoolean("noiseSupression", noiseSupression);
         editor.commit();
     }
 
@@ -873,31 +1046,71 @@ public class SharedConfig {
     }
 
     public static void checkSaveToGalleryFiles() {
-        try {
-            File telegramPath = new File(Environment.getExternalStorageDirectory(), "Telegram");
-            File imagePath = new File(telegramPath, "Telegram Images");
-            imagePath.mkdir();
-            File videoPath = new File(telegramPath, "Telegram Video");
-            videoPath.mkdir();
+        Utilities.globalQueue.postRunnable(() -> {
+            try {
+                File telegramPath = new File(Environment.getExternalStorageDirectory(), "Telegram");
+                File imagePath = new File(telegramPath, "Telegram Images");
+                imagePath.mkdir();
+                File videoPath = new File(telegramPath, "Telegram Video");
+                videoPath.mkdir();
 
-            if (saveToGallery) {
-                if (imagePath.isDirectory()) {
-                    new File(imagePath, ".nomedia").delete();
+                if (saveToGallery) {
+                    if (imagePath.isDirectory()) {
+                        new File(imagePath, ".nomedia").delete();
+                    }
+                    if (videoPath.isDirectory()) {
+                        new File(videoPath, ".nomedia").delete();
+                    }
+                } else {
+                    if (imagePath.isDirectory()) {
+                        AndroidUtilities.createEmptyFile(new File(imagePath, ".nomedia"));
+                    }
+                    if (videoPath.isDirectory()) {
+                        AndroidUtilities.createEmptyFile(new File(videoPath, ".nomedia"));
+                    }
                 }
-                if (videoPath.isDirectory()) {
-                    new File(videoPath, ".nomedia").delete();
-                }
-            } else {
-                if (imagePath.isDirectory()) {
-                    AndroidUtilities.createEmptyFile(new File(imagePath, ".nomedia"));
-                }
-                if (videoPath.isDirectory()) {
-                    AndroidUtilities.createEmptyFile(new File(videoPath, ".nomedia"));
-                }
+            } catch (Throwable e) {
+                FileLog.e(e);
             }
-        } catch (Throwable e) {
-            FileLog.e(e);
+        });
+    }
+
+    public static int getChatSwipeAction(int currentAccount) {
+        if (chatSwipeAction >= 0) {
+            if (chatSwipeAction == SwipeGestureSettingsView.SWIPE_GESTURE_FOLDERS && MessagesController.getInstance(currentAccount).dialogFilters.isEmpty()) {
+                return SwipeGestureSettingsView.SWIPE_GESTURE_ARCHIVE;
+            }
+            return chatSwipeAction;
+        } else if (!MessagesController.getInstance(currentAccount).dialogFilters.isEmpty()) {
+            return SwipeGestureSettingsView.SWIPE_GESTURE_FOLDERS;
+
         }
+        return SwipeGestureSettingsView.SWIPE_GESTURE_ARCHIVE;
+    }
+
+    public static void updateChatListSwipeSetting(int newAction) {
+        chatSwipeAction = newAction;
+        SharedPreferences preferences = ApplicationLoader.applicationContext.getSharedPreferences("mainconfig", Activity.MODE_PRIVATE);
+        preferences.edit().putInt("ChatSwipeAction", chatSwipeAction).apply();
+    }
+
+    public static void updateMessageSeenHintCount(int count) {
+        messageSeenHintCount = count;
+        SharedPreferences preferences = ApplicationLoader.applicationContext.getSharedPreferences("mainconfig", Activity.MODE_PRIVATE);
+        preferences.edit().putInt("messageSeenCount", messageSeenHintCount).apply();
+    }
+
+    public static void updateEmojiInteractionsHintCount(int count) {
+        emojiInteractionsHintCount = count;
+        SharedPreferences preferences = ApplicationLoader.applicationContext.getSharedPreferences("mainconfig", Activity.MODE_PRIVATE);
+        preferences.edit().putInt("emojiInteractionsHintCount", emojiInteractionsHintCount).apply();
+    }
+
+
+    public static void updateDayNightThemeSwitchHintCount(int count) {
+        dayNightThemeSwitchHintCount = count;
+        SharedPreferences preferences = ApplicationLoader.applicationContext.getSharedPreferences("mainconfig", Activity.MODE_PRIVATE);
+        preferences.edit().putInt("dayNightThemeSwitchHintCount", dayNightThemeSwitchHintCount).apply();
     }
 
     public final static int PERFORMANCE_CLASS_LOW = 0;
@@ -933,5 +1146,19 @@ public class SharedConfig {
         }
 
         return devicePerformanceClass;
+    }
+
+    public static void setMediaColumnsCount(int count) {
+        if (mediaColumnsCount != count) {
+            mediaColumnsCount = count;
+            ApplicationLoader.applicationContext.getSharedPreferences("mainconfig", Activity.MODE_PRIVATE).edit().putInt("mediaColumnsCount", mediaColumnsCount).apply();
+        }
+    }
+
+    public static void setFastScrollHintCount(int count) {
+        if (fastScrollHintCount != count) {
+            fastScrollHintCount = count;
+            ApplicationLoader.applicationContext.getSharedPreferences("mainconfig", Activity.MODE_PRIVATE).edit().putInt("fastScrollHintCount", fastScrollHintCount).apply();
+        }
     }
 }

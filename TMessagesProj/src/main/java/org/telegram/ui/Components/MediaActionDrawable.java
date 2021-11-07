@@ -10,6 +10,7 @@ import android.graphics.PixelFormat;
 import android.graphics.PorterDuff;
 import android.graphics.PorterDuffColorFilter;
 import android.graphics.RectF;
+import android.graphics.Shader;
 import android.graphics.drawable.Drawable;
 import android.text.TextPaint;
 import android.view.animation.DecelerateInterpolator;
@@ -34,6 +35,7 @@ public class MediaActionDrawable extends Drawable {
     public static final int ICON_CANCEL_NOPROFRESS = 12;
     public static final int ICON_CANCEL_PERCENT = 13;
     public static final int ICON_CANCEL_FILL = 14;
+    public static final int ICON_UPDATE = 15;
 
     private TextPaint textPaint = new TextPaint(Paint.ANTI_ALIAS_FLAG);
     private Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -80,6 +82,8 @@ public class MediaActionDrawable extends Drawable {
     private MediaActionDrawableDelegate delegate;
 
     private Theme.MessageDrawable messageDrawable;
+    private LinearGradient gradientDrawable;
+    private Matrix gradientMatrix;
     private boolean hasOverlayImage;
 
     public interface MediaActionDrawableDelegate {
@@ -221,7 +225,7 @@ public class MediaActionDrawable extends Drawable {
         return downloadProgress;
     }
 
-    private float getCircleValue(float value) {
+    public static float getCircleValue(float value) {
         while (value > 360) {
             value -= 360;
         }
@@ -238,6 +242,11 @@ public class MediaActionDrawable extends Drawable {
 
     public void setBackgroundDrawable(Theme.MessageDrawable drawable) {
         messageDrawable = drawable;
+    }
+
+    public void setBackgroundGradientDrawable(LinearGradient drawable) {
+        gradientDrawable = drawable;
+        gradientMatrix = new Matrix();
     }
 
     public void setHasOverlayImage(boolean value) {
@@ -261,18 +270,38 @@ public class MediaActionDrawable extends Drawable {
         }
     }
 
+    private void applyShaderMatrix(boolean path) {
+        if (messageDrawable != null && messageDrawable.hasGradient() && !hasOverlayImage) {
+            android.graphics.Rect bounds = getBounds();
+            Shader shader = messageDrawable.getGradientShader();
+            Matrix matrix = messageDrawable.getMatrix();
+            matrix.reset();
+            messageDrawable.applyMatrixScale();
+            if (path) {
+                matrix.postTranslate(-bounds.centerX(), -messageDrawable.getTopY() + bounds.top);
+            } else {
+                matrix.postTranslate(0, -messageDrawable.getTopY());
+            }
+            shader.setLocalMatrix(matrix);
+        }
+    }
+
     @Override
     public void draw(Canvas canvas) {
         android.graphics.Rect bounds = getBounds();
 
         if (messageDrawable != null && messageDrawable.hasGradient() && !hasOverlayImage) {
-            LinearGradient shader = messageDrawable.getGradientShader();
-            Matrix matrix = messageDrawable.getMatrix();
-            matrix.setTranslate(0, -messageDrawable.getTopY() + bounds.top);
-            shader.setLocalMatrix(matrix);
+            Shader shader = messageDrawable.getGradientShader();
             paint.setShader(shader);
             paint2.setShader(shader);
             paint3.setShader(shader);
+        } else if (gradientDrawable != null && !hasOverlayImage) {
+            gradientMatrix.reset();
+            gradientMatrix.setTranslate(0, bounds.top);
+            gradientDrawable.setLocalMatrix(gradientMatrix);
+            paint.setShader(gradientDrawable);
+            paint2.setShader(gradientDrawable);
+            paint3.setShader(gradientDrawable);
         } else {
             paint.setShader(null);
             paint2.setShader(null);
@@ -297,6 +326,7 @@ public class MediaActionDrawable extends Drawable {
 
         int width = AndroidUtilities.dp(3);
         if (currentIcon == ICON_DOWNLOAD || nextIcon == ICON_DOWNLOAD) {
+            applyShaderMatrix(false);
             float yStart = cy - AndroidUtilities.dp(9) * scale;
             float yEnd = cy + AndroidUtilities.dp(9) * scale;
             float yStart2;
@@ -418,6 +448,7 @@ public class MediaActionDrawable extends Drawable {
         }
 
         if (currentIcon == ICON_CANCEL || currentIcon == ICON_CANCEL_FILL || currentIcon == ICON_NONE && (nextIcon == ICON_CANCEL_FILL || nextIcon == ICON_CANCEL)) {
+            applyShaderMatrix(false);
             float d;
             float rotation;
             float iconScale = 1.0f;
@@ -435,7 +466,7 @@ public class MediaActionDrawable extends Drawable {
                     alpha = 0;
                 }
                 rotation = 0;
-            } else if (nextIcon == ICON_PLAY || nextIcon == ICON_PAUSE || nextIcon == ICON_FILE || nextIcon == ICON_GIF || nextIcon == ICON_SECRETCHECK || nextIcon == ICON_FIRE || nextIcon == ICON_CHECK) {
+            } else if (nextIcon == ICON_UPDATE || nextIcon == ICON_PLAY || nextIcon == ICON_PAUSE || nextIcon == ICON_FILE || nextIcon == ICON_GIF || nextIcon == ICON_SECRETCHECK || nextIcon == ICON_FIRE || nextIcon == ICON_CHECK) {
                 float progress;
                 float backProgress;
                 if (nextIcon == ICON_CHECK) {
@@ -535,6 +566,7 @@ public class MediaActionDrawable extends Drawable {
             }
 
             if (alpha != 0) {
+                applyShaderMatrix(false);
                 paint.setAlpha((int) (alpha * overrideAlpha));
                 float rad = Math.max(4, 360 * animatedDownloadProgress);
                 int diff = AndroidUtilities.dp(isMini ? 2 : 4);
@@ -560,6 +592,11 @@ public class MediaActionDrawable extends Drawable {
             previowsDrawableScale = Math.max(0.0f, 1.0f - transitionProgress / 0.5f);
         }
 
+        if (nextIcon == ICON_UPDATE) {
+            nextPath = Theme.chat_updatePath;
+        } else if (currentIcon == ICON_UPDATE) {
+            previousPath = Theme.chat_updatePath;
+        }
         if (nextIcon == ICON_FILE) {
             nextPath = Theme.chat_filePath;
         } else if (currentIcon == ICON_FILE) {
@@ -578,6 +615,7 @@ public class MediaActionDrawable extends Drawable {
 
 
         if (currentIcon == ICON_SECRETCHECK || nextIcon == ICON_SECRETCHECK) {
+            applyShaderMatrix(false);
             paint.setAlpha(currentIcon == nextIcon ? 255 : (int) (transitionProgress * 255));
             int y = cy + AndroidUtilities.dp(7);
             int x = cx - AndroidUtilities.dp(3);
@@ -592,6 +630,7 @@ public class MediaActionDrawable extends Drawable {
             }
         }
         if (currentIcon == ICON_CANCEL_NOPROFRESS || nextIcon == ICON_CANCEL_NOPROFRESS) {
+            applyShaderMatrix(false);
             float transition;
             if (currentIcon == nextIcon) {
                 transition = 1.0f;
@@ -618,6 +657,7 @@ public class MediaActionDrawable extends Drawable {
             }
         }
         if (currentIcon == ICON_CANCEL_PERCENT || nextIcon == ICON_CANCEL_PERCENT) {
+            applyShaderMatrix(false);
             float transition;
             if (currentIcon == nextIcon) {
                 transition = 1.0f;
@@ -671,6 +711,8 @@ public class MediaActionDrawable extends Drawable {
                 paint2.setAlpha(255);
             }
 
+            applyShaderMatrix(true);
+
             canvas.save();
             canvas.translate(bounds.centerX() + AndroidUtilities.dp(1) * (1.0f - p), bounds.centerY());
             float ms = 500.0f * p;
@@ -704,6 +746,7 @@ public class MediaActionDrawable extends Drawable {
             canvas.restore();
         }
         if (currentIcon == ICON_CHECK || nextIcon == ICON_CHECK) {
+            applyShaderMatrix(false);
             float progress1;
             float progress2;
             if (currentIcon != ICON_CHECK) {
@@ -757,9 +800,12 @@ public class MediaActionDrawable extends Drawable {
             int h = (int) (AndroidUtilities.dp(24) * previowsDrawableScale);
             paint2.setStyle(Paint.Style.FILL_AND_STROKE);
             paint2.setAlpha(currentIcon == nextIcon ? 255 : (int) ((1.0f - transitionProgress) * 255));
+            applyShaderMatrix(true);
             canvas.save();
             canvas.translate(cx - w / 2, cy - h / 2);
-            canvas.drawPath(previousPath[0], paint2);
+            if (previousPath[0] != null) {
+                canvas.drawPath(previousPath[0], paint2);
+            }
             if (previousPath[1] != null) {
                 canvas.drawPath(previousPath[1], backPaint);
             }
@@ -768,13 +814,27 @@ public class MediaActionDrawable extends Drawable {
         if (nextPath != null) {
             int w = (int) (AndroidUtilities.dp(24) * drawableScale);
             int h = (int) (AndroidUtilities.dp(24) * drawableScale);
+            int alpha = currentIcon == nextIcon ? 255 : (int) (transitionProgress * 255);
             paint2.setStyle(Paint.Style.FILL_AND_STROKE);
-            paint2.setAlpha(currentIcon == nextIcon ? 255 : (int) (transitionProgress * 255));
+            paint2.setAlpha(alpha);
+            applyShaderMatrix(true);
             canvas.save();
             canvas.translate(cx - w / 2, cy - h / 2);
-            canvas.drawPath(nextPath[0], paint2);
+            if (nextPath[0] != null) {
+                canvas.drawPath(nextPath[0], paint2);
+            }
+            if (nextPath.length >= 3 && nextPath[2] != null) {
+                canvas.drawPath(nextPath[2], paint);
+            }
             if (nextPath[1] != null) {
-                canvas.drawPath(nextPath[1], backPaint);
+                if (alpha != 255) {
+                    int backgroundAlpha = backPaint.getAlpha();
+                    backPaint.setAlpha((int) (backgroundAlpha * (alpha / 255f)));
+                    canvas.drawPath(nextPath[1], backPaint);
+                    backPaint.setAlpha(backgroundAlpha);
+                } else {
+                    canvas.drawPath(nextPath[1], backPaint);
+                }
             }
             canvas.restore();
         }

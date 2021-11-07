@@ -20,6 +20,7 @@ import android.view.accessibility.AccessibilityNodeInfo;
 import org.telegram.PhoneFormat.PhoneFormat;
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.ChatObject;
+import org.telegram.messenger.DialogObject;
 import org.telegram.messenger.ImageLocation;
 import org.telegram.messenger.ImageReceiver;
 import org.telegram.messenger.LocaleController;
@@ -33,6 +34,8 @@ import org.telegram.tgnet.TLRPC;
 import org.telegram.messenger.UserConfig;
 import org.telegram.ui.Components.AvatarDrawable;
 import org.telegram.ui.ActionBar.Theme;
+import org.telegram.ui.Components.CheckBox2;
+import org.telegram.ui.Components.LayoutHelper;
 import org.telegram.ui.NotificationsSettingsActivity;
 
 public class ProfileSearchCell extends BaseCell {
@@ -85,12 +88,20 @@ public class ProfileSearchCell extends BaseCell {
 
     private RectF rect = new RectF();
 
+    CheckBox2 checkBox;
+
     public ProfileSearchCell(Context context) {
         super(context);
 
         avatarImage = new ImageReceiver(this);
         avatarImage.setRoundRadius(AndroidUtilities.dp(23));
         avatarDrawable = new AvatarDrawable();
+
+        checkBox = new CheckBox2(context, 21);
+        checkBox.setColor(null, Theme.key_windowBackgroundWhite, Theme.key_checkboxCheck);
+        checkBox.setDrawUnchecked(false);
+        checkBox.setDrawBackgroundAsArc(3);
+        addView(checkBox);
     }
 
     public void setData(TLObject object, TLRPC.EncryptedChat ec, CharSequence n, CharSequence s, boolean needCount, boolean saved) {
@@ -152,27 +163,23 @@ public class ProfileSearchCell extends BaseCell {
             text = LocaleController.getString("NotificationsOff", R.string.NotificationsOff);
         }
 
-        int lower_id = (int) exception.did;
-        int high_id = (int) (exception.did >> 32);
-        if (lower_id != 0) {
-            if (lower_id > 0) {
-                TLRPC.User user = MessagesController.getInstance(currentAccount).getUser(lower_id);
-                if (user != null) {
-                    setData(user, null, name, text, false, false);
-                }
-            } else {
-                TLRPC.Chat chat = MessagesController.getInstance(currentAccount).getChat(-lower_id);
-                if (chat != null) {
-                    setData(chat, null, name, text, false, false);
-                }
-            }
-        } else {
-            TLRPC.EncryptedChat encryptedChat = MessagesController.getInstance(currentAccount).getEncryptedChat(high_id);
+        if (DialogObject.isEncryptedDialog(exception.did)) {
+            TLRPC.EncryptedChat encryptedChat = MessagesController.getInstance(currentAccount).getEncryptedChat(DialogObject.getEncryptedChatId(exception.did));
             if (encryptedChat != null) {
                 TLRPC.User user = MessagesController.getInstance(currentAccount).getUser(encryptedChat.user_id);
                 if (user != null) {
                     setData(user, encryptedChat, name, text, false, false);
                 }
+            }
+        } else if (DialogObject.isUserDialog(exception.did)) {
+            TLRPC.User user = MessagesController.getInstance(currentAccount).getUser(exception.did);
+            if (user != null) {
+                setData(user, null, name, text, false, false);
+            }
+        } else {
+            TLRPC.Chat chat = MessagesController.getInstance(currentAccount).getChat(-exception.did);
+            if (chat != null) {
+                setData(chat, null, name, text, false, false);
             }
         }
     }
@@ -191,6 +198,9 @@ public class ProfileSearchCell extends BaseCell {
 
     @Override
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
+        if (checkBox != null) {
+            checkBox.measure(MeasureSpec.makeMeasureSpec(AndroidUtilities.dp(24), MeasureSpec.EXACTLY), MeasureSpec.makeMeasureSpec(AndroidUtilities.dp(24), MeasureSpec.EXACTLY));
+        }
         setMeasuredDimension(MeasureSpec.getSize(widthMeasureSpec), AndroidUtilities.dp(60) + (useSeparator ? 1 : 0));
     }
 
@@ -198,6 +208,11 @@ public class ProfileSearchCell extends BaseCell {
     protected void onLayout(boolean changed, int left, int top, int right, int bottom) {
         if (user == null && chat == null && encryptedChat == null) {
             return;
+        }
+        if (checkBox != null) {
+            int x = LocaleController.isRTL ? (right - left) - AndroidUtilities.dp(42) : AndroidUtilities.dp(42);
+            int y = AndroidUtilities.dp(36);
+            checkBox.layout(x, y, x + checkBox.getMeasuredWidth(), y + checkBox.getMeasuredHeight());
         }
         if (changed) {
             buildLayout();
@@ -229,7 +244,7 @@ public class ProfileSearchCell extends BaseCell {
 
         if (encryptedChat != null) {
             drawNameLock = true;
-            dialog_id = ((long) encryptedChat.id) << 32;
+            dialog_id = DialogObject.makeEncryptedDialogId(encryptedChat.id);
             if (!LocaleController.isRTL) {
                 nameLockLeft = AndroidUtilities.dp(AndroidUtilities.leftBaseline);
                 nameLeft = AndroidUtilities.dp(AndroidUtilities.leftBaseline + 4) + Theme.dialogs_lockDrawable.getIntrinsicWidth();
@@ -394,28 +409,26 @@ public class ProfileSearchCell extends BaseCell {
                 nameTop = AndroidUtilities.dp(20);
             }
         } else {
-            if (chat != null) {
-                if (ChatObject.isChannel(chat) && !chat.megagroup) {
-                    if (chat.participants_count != 0) {
-                        statusString = LocaleController.formatPluralString("Subscribers", chat.participants_count);
-                    } else {
-                        if (TextUtils.isEmpty(chat.username)) {
-                            statusString = LocaleController.getString("ChannelPrivate", R.string.ChannelPrivate).toLowerCase();
-                        } else {
-                            statusString = LocaleController.getString("ChannelPublic", R.string.ChannelPublic).toLowerCase();
-                        }
-                    }
+            if (ChatObject.isChannel(chat) && !chat.megagroup) {
+                if (chat.participants_count != 0) {
+                    statusString = LocaleController.formatPluralString("Subscribers", chat.participants_count);
                 } else {
-                    if (chat.participants_count != 0) {
-                        statusString = LocaleController.formatPluralString("Members", chat.participants_count);
+                    if (TextUtils.isEmpty(chat.username)) {
+                        statusString = LocaleController.getString("ChannelPrivate", R.string.ChannelPrivate).toLowerCase();
                     } else {
-                        if (chat.has_geo) {
-                            statusString = LocaleController.getString("MegaLocation", R.string.MegaLocation);
-                        } else if (TextUtils.isEmpty(chat.username)) {
-                            statusString = LocaleController.getString("MegaPrivate", R.string.MegaPrivate).toLowerCase();
-                        } else {
-                            statusString = LocaleController.getString("MegaPublic", R.string.MegaPublic).toLowerCase();
-                        }
+                        statusString = LocaleController.getString("ChannelPublic", R.string.ChannelPublic).toLowerCase();
+                    }
+                }
+            } else {
+                if (chat.participants_count != 0) {
+                    statusString = LocaleController.formatPluralString("Members", chat.participants_count);
+                } else {
+                    if (chat.has_geo) {
+                        statusString = LocaleController.getString("MegaLocation", R.string.MegaLocation);
+                    } else if (TextUtils.isEmpty(chat.username)) {
+                        statusString = LocaleController.getString("MegaPrivate", R.string.MegaPrivate).toLowerCase();
+                    } else {
+                        statusString = LocaleController.getString("MegaPublic", R.string.MegaPublic).toLowerCase();
                     }
                 }
             }
@@ -428,6 +441,7 @@ public class ProfileSearchCell extends BaseCell {
             nameTop = AndroidUtilities.dp(9);
             nameLockTop -= AndroidUtilities.dp(10);
         } else {
+            nameTop = AndroidUtilities.dp(20);
             statusLayout = null;
         }
 
@@ -501,14 +515,14 @@ public class ProfileSearchCell extends BaseCell {
                 if (user.photo != null) {
                     photo = user.photo.photo_small;
                 }
-                avatarImage.setImage(ImageLocation.getForUser(user, false), "50_50", avatarDrawable, null, user, 0);
+                avatarImage.setImage(ImageLocation.getForUserOrChat(user, ImageLocation.TYPE_SMALL), "50_50", ImageLocation.getForUserOrChat(user, ImageLocation.TYPE_STRIPPED), "50_50", avatarDrawable, user, 0);
             }
         } else if (chat != null) {
             if (chat.photo != null) {
                 photo = chat.photo.photo_small;
             }
             avatarDrawable.setInfo(chat);
-            avatarImage.setImage(ImageLocation.getForChat(chat, false), "50_50", avatarDrawable, null, chat, 0);
+            avatarImage.setImage(ImageLocation.getForUserOrChat(chat, ImageLocation.TYPE_SMALL), "50_50", ImageLocation.getForUserOrChat(chat, ImageLocation.TYPE_STRIPPED), "50_50", avatarDrawable, chat, 0);
         } else {
             avatarDrawable.setInfo(0, null, null);
             avatarImage.setImage(null, null, avatarDrawable, null, null, 0);
@@ -517,7 +531,7 @@ public class ProfileSearchCell extends BaseCell {
         if (mask != 0) {
             boolean continueUpdate = false;
             if ((mask & MessagesController.UPDATE_MASK_AVATAR) != 0 && user != null || (mask & MessagesController.UPDATE_MASK_CHAT_AVATAR) != 0 && chat != null) {
-                if (lastAvatar != null && photo == null || lastAvatar == null && photo != null || lastAvatar != null && photo != null && (lastAvatar.volume_id != photo.volume_id || lastAvatar.local_id != photo.local_id)) {
+                if (lastAvatar != null && photo == null || lastAvatar == null && photo != null || lastAvatar != null && (lastAvatar.volume_id != photo.volume_id || lastAvatar.local_id != photo.local_id)) {
                     continueUpdate = true;
                 }
             }
@@ -660,5 +674,16 @@ public class ProfileSearchCell extends BaseCell {
             builder.append(statusLayout.getText());
         }
         info.setText(builder.toString());
+    }
+
+    public long getDialogId() {
+        return dialog_id;
+    }
+
+    public void setChecked(boolean checked, boolean animated) {
+        if (checkBox == null) {
+            return;
+        }
+        checkBox.setChecked(checked, animated);
     }
 }

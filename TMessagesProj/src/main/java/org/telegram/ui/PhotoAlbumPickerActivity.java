@@ -464,7 +464,7 @@ public class PhotoAlbumPickerActivity extends BaseFragment implements Notificati
                         sendPopupWindow.dismiss();
                     }
                 });
-                sendPopupLayout.setShowedFromBotton(false);
+                sendPopupLayout.setShownFromBotton(false);
 
                 itemCells = new ActionBarMenuSubItem[2];
                 for (int a = 0; a < 2; a++) {
@@ -479,7 +479,7 @@ public class PhotoAlbumPickerActivity extends BaseFragment implements Notificati
                         } else {
                             itemCells[a].setTextAndIcon(LocaleController.getString("ScheduleMessage", R.string.ScheduleMessage), R.drawable.msg_schedule);
                         }
-                    } else if (num == 1) {
+                    } else {
                         itemCells[a].setTextAndIcon(LocaleController.getString("SendWithoutSound", R.string.SendWithoutSound), R.drawable.input_notify_off);
                     }
                     itemCells[a].setMinimumWidth(AndroidUtilities.dp(196));
@@ -494,7 +494,7 @@ public class PhotoAlbumPickerActivity extends BaseFragment implements Notificati
                                 sendSelectedPhotos(selectedPhotos, selectedPhotosOrder, notify, scheduleDate);
                                 finishFragment();
                             });
-                        } else if (num == 1) {
+                        } else {
                             sendSelectedPhotos(selectedPhotos, selectedPhotosOrder, true, 0);
                             finishFragment();
                         }
@@ -555,7 +555,7 @@ public class PhotoAlbumPickerActivity extends BaseFragment implements Notificati
             commentTextView.setVisibility(View.GONE);
         }
 
-        if (loading && (albumsSorted == null || albumsSorted != null && albumsSorted.isEmpty())) {
+        if (loading && (albumsSorted == null || albumsSorted.isEmpty())) {
             progressView.setVisibility(View.VISIBLE);
             listView.setEmptyView(null);
         } else {
@@ -775,7 +775,7 @@ public class PhotoAlbumPickerActivity extends BaseFragment implements Notificati
 
     private void openPhotoPicker(MediaController.AlbumEntry albumEntry, int type) {
         if (albumEntry != null) {
-            PhotoPickerActivity fragment = new PhotoPickerActivity(type, albumEntry, selectedPhotos, selectedPhotosOrder, selectPhotoType, allowCaption, chatActivity);
+            PhotoPickerActivity fragment = new PhotoPickerActivity(type, albumEntry, selectedPhotos, selectedPhotosOrder, selectPhotoType, allowCaption, chatActivity, false);
             fragment.setCaption(caption = commentTextView.getText());
             fragment.setDelegate(new PhotoPickerActivity.PhotoPickerActivityDelegate() {
                 @Override
@@ -826,7 +826,7 @@ public class PhotoAlbumPickerActivity extends BaseFragment implements Notificati
                 fragment.setMaxSelectedPhotos(maxSelectedPhotos, allowOrder);
                 presentFragment(fragment);
             } else {
-                PhotoPickerActivity fragment = new PhotoPickerActivity(0, albumEntry, photos, order, selectPhotoType, allowCaption, chatActivity);
+                PhotoPickerActivity fragment = new PhotoPickerActivity(0, albumEntry, photos, order, selectPhotoType, allowCaption, chatActivity, false);
                 fragment.setCaption(caption = commentTextView.getText());
                 fragment.setDelegate(new PhotoPickerActivity.PhotoPickerActivityDelegate() {
                     @Override

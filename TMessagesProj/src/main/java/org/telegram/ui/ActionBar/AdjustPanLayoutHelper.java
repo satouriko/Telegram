@@ -8,10 +8,13 @@ import android.content.Context;
 import android.view.ContextThemeWrapper;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.ViewParent;
 import android.view.ViewTreeObserver;
 import android.view.Window;
 import android.view.animation.Interpolator;
 import android.widget.FrameLayout;
+
+import androidx.recyclerview.widget.ChatListItemAnimator;
 
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.NotificationCenter;
@@ -23,7 +26,7 @@ import java.util.ArrayList;
 
 public class AdjustPanLayoutHelper {
 
-    public final static Interpolator keyboardInterpolator = CubicBezierInterpolator.DEFAULT;
+    public final static Interpolator keyboardInterpolator = ChatListItemAnimator.DEFAULT_INTERPOLATOR;
     public final static long keyboardDuration = 250;
 
     private final View parent;
@@ -32,6 +35,15 @@ public class AdjustPanLayoutHelper {
     private ViewGroup contentView;
     private View resizableView;
     private boolean animationInProgress;
+    private boolean needDelay;
+    private Runnable delayedAnimationRunnable = new Runnable() {
+        @Override
+        public void run() {
+            if (animator != null && !animator.isRunning()) {
+                animator.start();
+            }
+        }
+    };
 
     int previousHeight = -1;
     int previousContentHeight = -1;
@@ -44,6 +56,8 @@ public class AdjustPanLayoutHelper {
 
     ArrayList<View> viewsToHeightSet = new ArrayList<>();
     protected float keyboardSize;
+
+    boolean checkHierarchyHeight;
 
     ViewTreeObserver.OnPreDrawListener onPreDrawListener = new ViewTreeObserver.OnPreDrawListener() {
         @Override
@@ -92,10 +106,17 @@ public class AdjustPanLayoutHelper {
 
         int startOffset = startOffset();
         getViewsToSetHeight(parent);
-        setViewHeight(Math.max(previousHeight, contentHeight));
+        int additionalContentHeight = 0;
+        if (checkHierarchyHeight) {
+            ViewParent viewParent = parent.getParent();
+            if (viewParent instanceof View) {
+                additionalContentHeight = ((View) viewParent).getHeight() - contentHeight;
+            }
+        }
+        setViewHeight(Math.max(previousHeight, contentHeight + additionalContentHeight));
         resizableView.requestLayout();
 
-        onTransitionStart(isKeyboardVisible);
+        onTransitionStart(isKeyboardVisible, contentHeight);
 
         float dy = contentHeight - previousHeight;
         float from;
@@ -138,11 +159,16 @@ public class AdjustPanLayoutHelper {
                 onTransitionEnd();
             }
         });
-        animator.setDuration(220);
-        animator.setInterpolator(CubicBezierInterpolator.DEFAULT);
+        animator.setDuration(keyboardDuration);
+        animator.setInterpolator(keyboardInterpolator);
 
         notificationsIndex = NotificationCenter.getInstance(selectedAccount).setAnimationInProgress(notificationsIndex, null);
-        animator.start();
+        if (needDelay) {
+            needDelay = false;
+            AndroidUtilities.runOnUIThread(delayedAnimationRunnable, 100);
+        } else {
+            animator.start();
+        }
     }
 
     private void setViewHeight(int height) {
@@ -240,7 +266,7 @@ public class AdjustPanLayoutHelper {
 
     }
 
-    protected void onTransitionStart(boolean keyboardVisible) {
+    protected void onTransitionStart(boolean keyboardVisible, int contentHeight) {
 
     }
 
@@ -254,5 +280,18 @@ public class AdjustPanLayoutHelper {
 
     public boolean animationInProgress() {
         return animationInProgress;
+    }
+
+    public void setCheckHierarchyHeight(boolean checkHierarchyHeight) {
+        this.checkHierarchyHeight = checkHierarchyHeight;
+    }
+
+    public void delayAnimation() {
+       needDelay = true;
+    }
+
+    public void runDelayedAnimation() {
+        AndroidUtilities.cancelRunOnUIThread(delayedAnimationRunnable);
+        delayedAnimationRunnable.run();
     }
 }

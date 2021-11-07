@@ -21,7 +21,6 @@ import android.graphics.Rect;
 import android.graphics.drawable.Drawable;
 import android.os.Vibrator;
 import android.text.Editable;
-import android.text.InputFilter;
 import android.text.SpannableStringBuilder;
 import android.text.TextPaint;
 import android.text.TextUtils;
@@ -111,9 +110,11 @@ public class PhotoViewerCaptionEnterView extends FrameLayout implements Notifica
 
     private TextPaint lengthTextPaint;
     private String lengthText;
+    private final Theme.ResourcesProvider resourcesProvider;
 
-    public PhotoViewerCaptionEnterView(Context context, SizeNotifierFrameLayoutPhoto parent, final View window) {
+    public PhotoViewerCaptionEnterView(Context context, SizeNotifierFrameLayoutPhoto parent, final View window, Theme.ResourcesProvider resourcesProvider) {
         super(context);
+        this.resourcesProvider = resourcesProvider;
         paint.setColor(0x7f000000);
         setWillNotDraw(false);
         setFocusable(true);
@@ -138,7 +139,7 @@ public class PhotoViewerCaptionEnterView extends FrameLayout implements Notifica
         emojiButton.setAlpha(0.58f);
         frameLayout.addView(emojiButton, LayoutHelper.createFrame(48, 48, Gravity.BOTTOM | Gravity.LEFT));
         emojiButton.setOnClickListener(view -> {
-            if (keyboardVisible) {
+            if (keyboardVisible || (AndroidUtilities.isInMultiwindow || AndroidUtilities.usingHardwareInput) && !isPopupShowing()) {
                 showPopup(1, false);
             } else {
                 openKeyboardInternal();
@@ -154,7 +155,7 @@ public class PhotoViewerCaptionEnterView extends FrameLayout implements Notifica
         lengthTextPaint.setTypeface(AndroidUtilities.getTypeface("fonts/rmedium.ttf"));
         lengthTextPaint.setColor(0xffd9d9d9);
 
-        messageEditText = new EditTextCaption(context) {
+        messageEditText = new EditTextCaption(context, null) {
             @Override
             protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
                 try {
@@ -230,7 +231,7 @@ public class PhotoViewerCaptionEnterView extends FrameLayout implements Notifica
         });
         messageEditText.setOnClickListener(view -> {
             if (isPopupShowing()) {
-                showPopup(AndroidUtilities.usingHardwareInput ? 0 : 2, false);
+                showPopup(AndroidUtilities.isInMultiwindow || AndroidUtilities.usingHardwareInput ? 0 : 2, false);
             }
         });
         messageEditText.addTextChangedListener(new TextWatcher() {
@@ -319,7 +320,7 @@ public class PhotoViewerCaptionEnterView extends FrameLayout implements Notifica
                     sendButtonColorAnimator = ValueAnimator.ofFloat(sendButtonEnabled ? 0 : 1f, sendButtonEnabled ? 1f : 0);
                     sendButtonColorAnimator.addUpdateListener(valueAnimator -> {
                         sendButtonEnabledProgress = (float) valueAnimator.getAnimatedValue();
-                        int color = Theme.getColor(Theme.key_dialogFloatingIcon);
+                        int color = getThemedColor(Theme.key_dialogFloatingIcon);
                         int alpha = Color.alpha(color);
                         Theme.setDrawableColor(checkDrawable, ColorUtils.setAlphaComponent(color, (int) (alpha * (0.58f + 0.42f * sendButtonEnabledProgress))));
                         doneButton.invalidate();
@@ -446,8 +447,8 @@ public class PhotoViewerCaptionEnterView extends FrameLayout implements Notifica
     }
 
     public void updateColors() {
-        Theme.setDrawableColor(doneDrawable, Theme.getColor(Theme.key_dialogFloatingButton));
-        int color = Theme.getColor(Theme.key_dialogFloatingIcon);
+        Theme.setDrawableColor(doneDrawable, getThemedColor(Theme.key_dialogFloatingButton));
+        int color = getThemedColor(Theme.key_dialogFloatingIcon);
         int alpha = Color.alpha(color);
         Theme.setDrawableColor(checkDrawable, ColorUtils.setAlphaComponent(color, (int) (alpha * (0.58f + 0.42f * sendButtonEnabledProgress))));
         if (emojiView != null) {
@@ -483,7 +484,7 @@ public class PhotoViewerCaptionEnterView extends FrameLayout implements Notifica
     }
 
     public void onCreate() {
-        NotificationCenter.getGlobalInstance().addObserver(this, NotificationCenter.emojiDidLoad);
+        NotificationCenter.getGlobalInstance().addObserver(this, NotificationCenter.emojiLoaded);
         sizeNotifierLayout.setDelegate(this);
     }
 
@@ -493,7 +494,7 @@ public class PhotoViewerCaptionEnterView extends FrameLayout implements Notifica
             closeKeyboard();
         }
         keyboardVisible = false;
-        NotificationCenter.getGlobalInstance().removeObserver(this, NotificationCenter.emojiDidLoad);
+        NotificationCenter.getGlobalInstance().removeObserver(this, NotificationCenter.emojiLoaded);
         if (sizeNotifierLayout != null) {
             sizeNotifierLayout.setDelegate(null);
         }
@@ -538,7 +539,7 @@ public class PhotoViewerCaptionEnterView extends FrameLayout implements Notifica
         if (emojiView != null) {
             return;
         }
-        emojiView = new EmojiView(false, false, getContext(), false, null);
+        emojiView = new EmojiView(false, false, getContext(), false, null, null, null);
         emojiView.setDelegate(new EmojiView.EmojiViewDelegate() {
             @Override
             public boolean onBackspace() {
@@ -713,7 +714,7 @@ public class PhotoViewerCaptionEnterView extends FrameLayout implements Notifica
     }
 
     private void openKeyboardInternal() {
-        showPopup(AndroidUtilities.usingHardwareInput ? 0 : 2, false);
+        showPopup(AndroidUtilities.isInMultiwindow || AndroidUtilities.usingHardwareInput ? 0 : 2, false);
         openKeyboard();
     }
 
@@ -753,7 +754,7 @@ public class PhotoViewerCaptionEnterView extends FrameLayout implements Notifica
     }
 
     public boolean isKeyboardVisible() {
-        return AndroidUtilities.usingHardwareInput && getTag() != null || keyboardVisible;
+        return (AndroidUtilities.usingHardwareInput || AndroidUtilities.isInMultiwindow) && getTag() != null || keyboardVisible;
     }
 
     @Override
@@ -810,7 +811,7 @@ public class PhotoViewerCaptionEnterView extends FrameLayout implements Notifica
 
     @Override
     public void didReceivedNotification(int id, int account, Object... args) {
-        if (id == NotificationCenter.emojiDidLoad) {
+        if (id == NotificationCenter.emojiLoaded) {
             if (emojiView != null) {
                 emojiView.invalidateViews();
             }
@@ -823,5 +824,10 @@ public class PhotoViewerCaptionEnterView extends FrameLayout implements Notifica
 
     public EditTextCaption getMessageEditText() {
         return messageEditText;
+    }
+
+    private int getThemedColor(String key) {
+        Integer color = resourcesProvider != null ? resourcesProvider.getColor(key) : null;
+        return color != null ? color : Theme.getColor(key);
     }
 }

@@ -4,8 +4,10 @@
 #include "VideoCaptureInterfaceImpl.h"
 #include "VideoCapturerInterface.h"
 #include "CodecSelectHelper.h"
+#include "AudioDeviceHelper.h"
 #include "Message.h"
 #include "platform/PlatformInterface.h"
+#include "StaticThreads.h"
 
 #include "api/audio_codecs/audio_decoder_factory_template.h"
 #include "api/audio_codecs/audio_encoder_factory_template.h"
@@ -33,12 +35,6 @@ constexpr uint32_t ssrcVideoOutgoing = 4;
 constexpr uint32_t ssrcVideoFecIncoming = 7;
 constexpr uint32_t ssrcVideoFecOutgoing = 8;
 
-rtc::Thread *makeWorkerThread() {
-	static std::unique_ptr<rtc::Thread> value = rtc::Thread::Create();
-	value->SetName("WebRTC-Worker", nullptr);
-	value->Start();
-	return value.get();
-}
 
 VideoCaptureInterfaceObject *GetVideoCaptureAssumingSameThread(VideoCaptureInterface *videoCapture) {
 	return videoCapture
@@ -70,6 +66,90 @@ public:
     virtual ~AudioCaptureAnalyzer() = default;
 };
 
+class AudioCapturePostProcessor : public webrtc::CustomProcessing {
+public:
+    AudioCapturePostProcessor(std::function<void(float)> updated, std::vector<float> *externalAudioSamples, webrtc::Mutex *externalAudioSamplesMutex) :
+    _updated(updated),
+    _externalAudioSamples(externalAudioSamples),
+    _externalAudioSamplesMutex(externalAudioSamplesMutex) {
+    }
+
+    virtual ~AudioCapturePostProcessor() {
+    }
+
+private:
+    virtual void Initialize(int sample_rate_hz, int num_channels) override {
+    }
+
+    virtual void Process(webrtc::AudioBuffer *buffer) override {
+        if (!buffer) {
+            return;
+        }
+        if (buffer->num_channels() != 1) {
+            return;
+        }
+
+        float peak = 0;
+        int peakCount = 0;
+        const float *samples = buffer->channels_const()[0];
+        for (int i = 0; i < buffer->num_frames(); i++) {
+            float sample = samples[i];
+            if (sample < 0) {
+                sample = -sample;
+            }
+            if (peak < sample) {
+                peak = sample;
+            }
+            peakCount += 1;
+        }
+
+        _peakCount += peakCount;
+        if (_peak < peak) {
+            _peak = peak;
+        }
+        if (_peakCount >= 1200) {
+            float level = _peak / 8000.0f;
+            _peak = 0;
+            _peakCount = 0;
+
+            _updated(level);
+        }
+
+        _externalAudioSamplesMutex->Lock();
+        if (!_externalAudioSamples->empty()) {
+            float *bufferData = buffer->channels()[0];
+            int takenSamples = 0;
+            for (int i = 0; i < _externalAudioSamples->size() && i < buffer->num_frames(); i++) {
+                float sample = (*_externalAudioSamples)[i];
+                sample += bufferData[i];
+                sample = std::min(sample, 32768.f);
+                sample = std::max(sample, -32768.f);
+                bufferData[i] = sample;
+                takenSamples++;
+            }
+            if (takenSamples != 0) {
+                _externalAudioSamples->erase(_externalAudioSamples->begin(), _externalAudioSamples->begin() + takenSamples);
+            }
+        }
+        _externalAudioSamplesMutex->Unlock();
+    }
+
+    virtual std::string ToString() const override {
+        return "CustomPostProcessing";
+    }
+
+    virtual void SetRuntimeSetting(webrtc::AudioProcessing::RuntimeSetting setting) override {
+    }
+
+private:
+    std::function<void(float)> _updated;
+
+    int32_t _peakCount = 0;
+    float _peak = 0;
+
+    std::vector<float> *_externalAudioSamples = nullptr;
+    webrtc::Mutex *_externalAudioSamplesMutex = nullptr;
+};
 
 } // namespace
 
@@ -151,11 +231,6 @@ public:
     }
 };
 
-rtc::Thread *MediaManager::getWorkerThread() {
-	static rtc::Thread *value = makeWorkerThread();
-	return value;
-}
-
 MediaManager::MediaManager(
 	rtc::Thread *thread,
 	bool isOutgoing,
@@ -166,6 +241,7 @@ MediaManager::MediaManager(
 	std::function<void(Message &&)> sendTransportMessage,
     std::function<void(int)> signalBarsUpdated,
     std::function<void(float)> audioLevelUpdated,
+    std::function<rtc::scoped_refptr<webrtc::AudioDeviceModule>(webrtc::TaskQueueFactory*)> createAudioDeviceModule,
     bool enableHighBitrateVideo,
     std::vector<std::string> preferredCodecs,
     std::shared_ptr<PlatformContext> platformContext) :
@@ -176,6 +252,7 @@ _sendSignalingMessage(std::move(sendSignalingMessage)),
 _sendTransportMessage(std::move(sendTransportMessage)),
 _signalBarsUpdated(std::move(signalBarsUpdated)),
 _audioLevelUpdated(std::move(audioLevelUpdated)),
+_createAudioDeviceModule(std::move(createAudioDeviceModule)),
 _protocolVersion(protocolVersion),
 _outgoingVideoState(videoCapture ? VideoState::Active : VideoState::Inactive),
 _videoCapture(std::move(videoCapture)),
@@ -208,10 +285,11 @@ _platformContext(platformContext) {
 
 	webrtc::field_trial::InitFieldTrialsFromString(
 		"WebRTC-Audio-SendSideBwe/Enabled/"
-		"WebRTC-Audio-Allocation/min:6kbps,max:32kbps/"
+		"WebRTC-Audio-Allocation/min:32kbps,max:32kbps/"
 		"WebRTC-Audio-OpusMinPacketLossRate/Enabled-1/"
 		"WebRTC-FlexFEC-03/Enabled/"
 		"WebRTC-FlexFEC-03-Advertised/Enabled/"
+        "WebRTC-Turn-AllowSystemPorts/Enabled/"
 	);
 
 	PlatformInterface::SharedInstance()->configurePlatformAudio();
@@ -232,55 +310,21 @@ _platformContext(platformContext) {
         preferredCodecs,
         _platformContext);
 
-    // [this] should outlive the analyzer
-    auto analyzer = new AudioCaptureAnalyzer([this](const webrtc::AudioBuffer* buffer) {
-        if (!buffer) {
-            return;
-        }
-        if (buffer->num_channels() != 1) {
-            return;
-        }
-
-        float peak = 0;
-        int peakCount = 0;
-        const float *samples = buffer->channels_const()[0];
-        for (int i = 0; i < buffer->num_frames(); i++) {
-            float sample = samples[i];
-            if (sample < 0) {
-                sample = -sample;
-            }
-            if (peak < sample) {
-                peak = sample;
-            }
-            peakCount += 1;
-        }
-
-        this->_thread->PostTask(RTC_FROM_HERE, [this, peak, peakCount](){
-            auto strong = this;
-
-            strong->_myAudioLevelPeakCount += peakCount;
-            if (strong->_myAudioLevelPeak < peak) {
-                strong->_myAudioLevelPeak = peak;
-            }
-            if (strong->_myAudioLevelPeakCount >= 1200) {
-                float level = strong->_myAudioLevelPeak / 4000.0f;
-                strong->_myAudioLevelPeak = 0;
-                strong->_myAudioLevelPeakCount = 0;
-                strong->_currentMyAudioLevel = level;
-            }
-        });
-    });
-
     webrtc::AudioProcessingBuilder builder;
-    builder.SetCaptureAnalyzer(std::unique_ptr<AudioCaptureAnalyzer>(analyzer));
-
+    std::unique_ptr<AudioCapturePostProcessor> audioProcessor = std::make_unique<AudioCapturePostProcessor>([this](float level) {
+        this->_thread->PostTask(RTC_FROM_HERE, [this, level](){
+            auto strong = this;
+            strong->_currentMyAudioLevel = level;
+        });
+    }, &_externalAudioSamples, &_externalAudioSamplesMutex);
+    builder.SetCapturePostProcessing(std::move(audioProcessor));
     mediaDeps.audio_processing = builder.Create();
 
-	/*_audioDeviceModule = createAudioDeviceModule();
+	_audioDeviceModule = this->createAudioDeviceModule();
 	if (!_audioDeviceModule) {
 		return;
 	}
-	mediaDeps.adm = _audioDeviceModule;*/
+	mediaDeps.adm = _audioDeviceModule;
 
 	_mediaEngine = cricket::CreateMediaEngine(std::move(mediaDeps));
 	_mediaEngine->Init();
@@ -360,27 +404,24 @@ _platformContext(platformContext) {
 }
 
 rtc::scoped_refptr<webrtc::AudioDeviceModule> MediaManager::createAudioDeviceModule() {
-	const auto check = [&](webrtc::AudioDeviceModule::AudioLayer layer) {
-		auto result = webrtc::AudioDeviceModule::Create(
+	const auto create = [&](webrtc::AudioDeviceModule::AudioLayer layer) {
+		return webrtc::AudioDeviceModule::Create(
 			layer,
-			_taskQueueFactory.get());
-		return (result && (result->Init() == 0)) ? result : nullptr;
+            _taskQueueFactory.get());
 	};
-#ifdef WEBRTC_WIN
-	if (auto result = webrtc::CreateWindowsCoreAudioAudioDeviceModule(_taskQueueFactory.get())) {
-		if (result->Init() == 0) {
+	const auto check = [&](const rtc::scoped_refptr<webrtc::AudioDeviceModule> &result) {
+        return (result && result->Init() == 0) ? result : nullptr;
+	};
+	if (_createAudioDeviceModule) {
+        if (const auto result = check(_createAudioDeviceModule(_taskQueueFactory.get()))) {
             return result;
-	    }
-    }
-#endif // WEBRTC_WIN
-	if (auto result = check(webrtc::AudioDeviceModule::kPlatformDefaultAudio)) {
-		return result;
-#ifdef WEBRTC_LINUX
-	} else if (auto result = check(webrtc::AudioDeviceModule::kLinuxAlsaAudio)) {
-		return result;
-#endif // WEBRTC_LINUX
+        }
 	}
-	return nullptr;
+#ifdef ANDROID
+    return check(create(webrtc::AudioDeviceModule::kAndroidMergedScreenAudio));
+#else
+    return check(create(webrtc::AudioDeviceModule::kPlatformDefaultAudio));
+#endif
 }
 
 void MediaManager::start() {
@@ -405,7 +446,7 @@ void MediaManager::start() {
 
     beginStatsTimer(3000);
     if (_audioLevelUpdated != nullptr) {
-        beginLevelsTimer(50);
+        beginLevelsTimer(100);
     }
 }
 
@@ -450,6 +491,8 @@ MediaManager::~MediaManager() {
     }
 
     _videoChannel->SetInterface(nullptr);
+
+    _audioDeviceModule = nullptr;
 }
 
 void MediaManager::setIsConnected(bool isConnected) {
@@ -516,7 +559,7 @@ void MediaManager::beginLevelsTimer(int timeoutMs) {
         float effectiveLevel = fmaxf(strong->_currentAudioLevel, strong->_currentMyAudioLevel);
         strong->_audioLevelUpdated(effectiveLevel);
 
-        strong->beginLevelsTimer(50);
+        strong->beginLevelsTimer(100);
     }, timeoutMs);
 }
 
@@ -593,15 +636,17 @@ void MediaManager::setSendVideo(std::shared_ptr<VideoCaptureInterface> videoCapt
     const auto wasReceiving = computeIsReceivingVideo();
 
     if (_videoCapture) {
-		GetVideoCaptureAssumingSameThread(_videoCapture.get())->setStateUpdated(nullptr);
+        GetVideoCaptureAssumingSameThread(_videoCapture.get())->setStateUpdated(nullptr);
     }
     _videoCapture = videoCapture;
-	if (_videoCapture) {
+    if (_videoCapture) {
         _videoCapture->setPreferredAspectRatio(_preferredAspectRatio);
 
 		const auto thread = _thread;
 		const auto weak = std::weak_ptr<MediaManager>(shared_from_this());
-		GetVideoCaptureAssumingSameThread(_videoCapture.get())->setStateUpdated([=](VideoState state) {
+        const auto object = GetVideoCaptureAssumingSameThread(_videoCapture.get());
+        _isScreenCapture = object->isScreenCapture();
+		object->setStateUpdated([=](VideoState state) {
 			thread->PostTask(RTC_FROM_HERE, [=] {
 				if (const auto strong = weak.lock()) {
 					strong->setOutgoingVideoState(state);
@@ -610,11 +655,43 @@ void MediaManager::setSendVideo(std::shared_ptr<VideoCaptureInterface> videoCapt
 		});
         setOutgoingVideoState(VideoState::Active);
     } else {
+        _isScreenCapture = false;
+
         setOutgoingVideoState(VideoState::Inactive);
+    }
+
+    if (_enableFlexfec) {
+        _videoChannel->RemoveSendStream(_ssrcVideo.outgoing);
+        _videoChannel->RemoveSendStream(_ssrcVideo.fecOutgoing);
+    } else {
+        _videoChannel->RemoveSendStream(_ssrcVideo.outgoing);
+    }
+
+    if (_enableFlexfec) {
+        cricket::StreamParams videoSendStreamParams;
+        cricket::SsrcGroup videoSendSsrcGroup(cricket::kFecFrSsrcGroupSemantics, {_ssrcVideo.outgoing, _ssrcVideo.fecOutgoing});
+        videoSendStreamParams.ssrcs = {_ssrcVideo.outgoing};
+        videoSendStreamParams.ssrc_groups.push_back(videoSendSsrcGroup);
+        videoSendStreamParams.cname = "cname";
+        _videoChannel->AddSendStream(videoSendStreamParams);
+    } else {
+        _videoChannel->AddSendStream(cricket::StreamParams::CreateLegacy(_ssrcVideo.outgoing));
     }
 
     checkIsSendingVideoChanged(wasSending);
     checkIsReceivingVideoChanged(wasReceiving);
+}
+
+void MediaManager::sendVideoDeviceUpdated() {
+    if (!computeIsSendingVideo()) {
+        return;
+    }
+    const auto wasScreenCapture = _isScreenCapture;
+    const auto object = GetVideoCaptureAssumingSameThread(_videoCapture.get());
+    _isScreenCapture = object->isScreenCapture();
+    if (_isScreenCapture != wasScreenCapture) {
+        adjustBitratePreferences(true);
+    }
 }
 
 void MediaManager::setRequestedVideoAspect(float aspect) {
@@ -719,9 +796,16 @@ int MediaManager::getMaxAudioBitrate() const {
 void MediaManager::adjustBitratePreferences(bool resetStartBitrate) {
     if (computeIsSendingVideo()) {
         webrtc::BitrateConstraints preferences;
-        preferences.min_bitrate_bps = 64000;
-        if (resetStartBitrate) {
-            preferences.start_bitrate_bps = 400000;
+        if (_isScreenCapture) {
+            preferences.min_bitrate_bps = 700000;
+            if (resetStartBitrate) {
+                preferences.start_bitrate_bps = 700000;
+            }
+        } else {
+            preferences.min_bitrate_bps = 64000;
+            if (resetStartBitrate) {
+                preferences.start_bitrate_bps = 400000;
+            }
         }
         preferences.max_bitrate_bps = getMaxVideoBitrate();
 
@@ -758,7 +842,9 @@ void MediaManager::checkIsReceivingVideoChanged(bool wasReceiving) {
         const auto codecs = {
             cricket::kFlexfecCodecName,
             cricket::kH264CodecName,
+#ifndef WEBRTC_DISABLE_H265
             cricket::kH265CodecName,
+#endif
             cricket::kVp8CodecName,
             cricket::kVp9CodecName,
             cricket::kAv1CodecName,
@@ -885,91 +971,17 @@ void MediaManager::fillCallStats(CallStats &callStats) {
 }
 
 void MediaManager::setAudioInputDevice(std::string id) {
-	const auto recording = _audioDeviceModule->Recording();
-	if (recording) {
-		_audioDeviceModule->StopRecording();
-	}
-	const auto finish = [&] {
-		if (recording) {
-			_audioDeviceModule->InitRecording();
-			_audioDeviceModule->StartRecording();
-		}
-	};
-	if (id == "default" || id.empty()) {
-		if (const auto result = _audioDeviceModule->SetRecordingDevice(webrtc::AudioDeviceModule::kDefaultCommunicationDevice)) {
-			RTC_LOG(LS_ERROR) << "setAudioInputDevice(" << id << "): SetRecordingDevice(kDefaultCommunicationDevice) failed: " << result << ".";
-		} else {
-			RTC_LOG(LS_INFO) << "setAudioInputDevice(" << id << "): SetRecordingDevice(kDefaultCommunicationDevice) success.";
-		}
-		return finish();
-	}
-	const auto count = _audioDeviceModule
-		? _audioDeviceModule->RecordingDevices()
-		: int16_t(-666);
-	if (count <= 0) {
-		RTC_LOG(LS_ERROR) << "setAudioInputDevice(" << id << "): Could not get recording devices count: " << count << ".";
-		return finish();
-	}
-	for (auto i = 0; i != count; ++i) {
-		char name[webrtc::kAdmMaxDeviceNameSize + 1] = { 0 };
-		char guid[webrtc::kAdmMaxGuidSize + 1] = { 0 };
-		_audioDeviceModule->RecordingDeviceName(i, name, guid);
-		if (id == guid) {
-			const auto result = _audioDeviceModule->SetRecordingDevice(i);
-			if (result != 0) {
-				RTC_LOG(LS_ERROR) << "setAudioInputDevice(" << id << ") name '" << std::string(name) << "' failed: " << result << ".";
-			} else {
-				RTC_LOG(LS_INFO) << "setAudioInputDevice(" << id << ") name '" << std::string(name) << "' success.";
-			}
-			return finish();
-		}
-	}
-	RTC_LOG(LS_ERROR) << "setAudioInputDevice(" << id << "): Could not find recording device.";
-	return finish();
+#if defined(WEBRTC_IOS)
+#else
+    SetAudioInputDeviceById(_audioDeviceModule.get(), id);
+#endif
 }
 
 void MediaManager::setAudioOutputDevice(std::string id) {
-	const auto playing = _audioDeviceModule->Playing();
-	if (playing) {
-		_audioDeviceModule->StopPlayout();
-	}
-	const auto finish = [&] {
-		if (playing) {
-			_audioDeviceModule->InitPlayout();
-			_audioDeviceModule->StartPlayout();
-		}
-	};
-	if (id == "default" || id.empty()) {
-		if (const auto result = _audioDeviceModule->SetPlayoutDevice(webrtc::AudioDeviceModule::kDefaultCommunicationDevice)) {
-			RTC_LOG(LS_ERROR) << "setAudioOutputDevice(" << id << "): SetPlayoutDevice(kDefaultCommunicationDevice) failed: " << result << ".";
-		} else {
-			RTC_LOG(LS_INFO) << "setAudioOutputDevice(" << id << "): SetPlayoutDevice(kDefaultCommunicationDevice) success.";
-		}
-		return finish();
-	}
-	const auto count = _audioDeviceModule
-		? _audioDeviceModule->PlayoutDevices()
-		: int16_t(-666);
-	if (count <= 0) {
-		RTC_LOG(LS_ERROR) << "setAudioOutputDevice(" << id << "): Could not get playout devices count: " << count << ".";
-		return finish();
-	}
-	for (auto i = 0; i != count; ++i) {
-		char name[webrtc::kAdmMaxDeviceNameSize + 1] = { 0 };
-		char guid[webrtc::kAdmMaxGuidSize + 1] = { 0 };
-		_audioDeviceModule->PlayoutDeviceName(i, name, guid);
-		if (id == guid) {
-			const auto result = _audioDeviceModule->SetPlayoutDevice(i);
-			if (result != 0) {
-				RTC_LOG(LS_ERROR) << "setAudioOutputDevice(" << id << ") name '" << std::string(name) << "' failed: " << result << ".";
-			} else {
-				RTC_LOG(LS_INFO) << "setAudioOutputDevice(" << id << ") name '" << std::string(name) << "' success.";
-			}
-			return finish();
-		}
-	}
-	RTC_LOG(LS_ERROR) << "setAudioOutputDevice(" << id << "): Could not find playout device.";
-	return finish();
+#if defined(WEBRTC_IOS)
+#else
+    SetAudioOutputDeviceById(_audioDeviceModule.get(), id);
+#endif
 }
 
 void MediaManager::setInputVolume(float level) {
@@ -1008,6 +1020,23 @@ void MediaManager::setOutputVolume(float level) {
 //	} else {
 //		RTC_LOG(LS_INFO) << "setOutputVolume(" << level << ") volume " << volume << " success.";
 //	}
+}
+
+void MediaManager::addExternalAudioSamples(std::vector<uint8_t> &&samples) {
+    if (samples.size() % 2 != 0) {
+        return;
+    }
+    _externalAudioSamplesMutex.Lock();
+
+    size_t previousSize = _externalAudioSamples.size();
+    _externalAudioSamples.resize(_externalAudioSamples.size() + samples.size() / 2);
+    webrtc::S16ToFloatS16((const int16_t *)samples.data(), samples.size() / 2, _externalAudioSamples.data() + previousSize);
+
+    if (_externalAudioSamples.size() > 2 * 48000) {
+        _externalAudioSamples.erase(_externalAudioSamples.begin(), _externalAudioSamples.begin() + (_externalAudioSamples.size() - 2 * 48000));
+    }
+
+    _externalAudioSamplesMutex.Unlock();
 }
 
 MediaManager::NetworkInterfaceImpl::NetworkInterfaceImpl(MediaManager *mediaManager, bool isVideo) :

@@ -1,5 +1,8 @@
 package org.telegram.messenger;
 
+import android.graphics.Paint;
+import android.graphics.Path;
+
 import org.telegram.tgnet.TLRPC;
 import org.telegram.ui.ActionBar.Theme;
 
@@ -9,12 +12,12 @@ public class DocumentObject {
 
     public static class ThemeDocument extends TLRPC.TL_document {
 
-        public TLRPC.TL_themeSettings themeSettings;
+        public TLRPC.ThemeSettings themeSettings;
         public TLRPC.Document wallpaper;
         public Theme.ThemeInfo baseTheme;
         public Theme.ThemeAccent accent;
 
-        public ThemeDocument(TLRPC.TL_themeSettings settings) {
+        public ThemeDocument(TLRPC.ThemeSettings settings) {
             themeSettings = settings;
             baseTheme = Theme.getTheme(Theme.getBaseThemeKey(settings));
             accent = baseTheme.createNewAccent(settings);
@@ -67,6 +70,19 @@ public class DocumentObject {
 
     public static SvgHelper.SvgDrawable getSvgThumb(TLRPC.Document document, String colorKey, float alpha) {
         return getSvgThumb(document, colorKey, alpha, 1.0f);
+    }
+
+    public static SvgHelper.SvgDrawable getSvgRectThumb(String colorKey, float alpha) {
+        Path path = new Path();
+        path.addRect(0, 0, 512, 512, Path.Direction.CW);
+        path.close();
+        SvgHelper.SvgDrawable drawable = new SvgHelper.SvgDrawable();
+        drawable.commands.add(path);
+        drawable.paints.put(path, new Paint(Paint.ANTI_ALIAS_FLAG));
+        drawable.width = 512;
+        drawable.height = 512;
+        drawable.setupGradient(colorKey, alpha);
+        return drawable;
     }
 
     public static SvgHelper.SvgDrawable getSvgThumb(TLRPC.Document document, String colorKey, float alpha, float zoom) {

@@ -148,7 +148,7 @@ public class UpdateHelper {
     /**
      * Returns a natural number if some abi is supported by device
      * o/w negative
-     * @param abi abi, afat for universal
+     * @param abi abi
      * @return int
      */
     private int isSupportedAbi(String abi) {
@@ -158,7 +158,7 @@ public class UpdateHelper {
         } else {
             supportedABIs = new ArrayList<>(Arrays.asList(Build.CPU_ABI, Build.CPU_ABI2));
         }
-        if (abi.equals("afat"))
+        if (abi.equals("universal"))
             return supportedABIs.size() + 1;
         else
             return supportedABIs.indexOf(abi);
@@ -167,8 +167,8 @@ public class UpdateHelper {
     /**
      * Returns a positive number if a is favored than b
      * o/w negative
-     * @param a abi, afat for universal
-     * @param b abi, afat for universal
+     * @param a abi
+     * @param b abi
      * @return int
      */
     private int compareAbiFavor(String a, String b) {
@@ -198,7 +198,7 @@ public class UpdateHelper {
                     continue;
                 }
                 TLRPC.TL_documentAttributeFilename filename = (TLRPC.TL_documentAttributeFilename)attribute;
-                Pattern r = Pattern.compile("^Nanogram-[^-]+-(\\d+)-(.+)-release\\.apk$");
+                Pattern r = Pattern.compile("^Nanogram-[^-]+-(\\d+)-(.+)\\.apk$");
                 Matcher m = r.matcher(filename.file_name);
                 if (m.find()) {
                     int ver;
@@ -333,7 +333,7 @@ public class UpdateHelper {
                     return;
                 }
                 req.peer = new TLRPC.TL_inputPeerChannel();
-                int uid = resolvedPeer.chats.get(0).id;
+                long uid = resolvedPeer.chats.get(0).id;
                 req.peer.channel_id = uid;
                 req.peer.access_hash = resolvedPeer.chats.get(0).access_hash;
                 int reqId = getConnectionsManager().sendRequest(req, (response, error) -> {

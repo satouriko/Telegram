@@ -30,8 +30,9 @@ import android.text.TextUtils;
 
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GooglePlayServicesUtil;
-import com.google.firebase.iid.FirebaseInstanceId;
+import com.google.firebase.messaging.FirebaseMessaging;
 
+import org.telegram.messenger.voip.VideoCapturerDevice;
 import org.telegram.tgnet.ConnectionsManager;
 import org.telegram.tgnet.TLRPC;
 import org.telegram.ui.Components.ForegroundDetector;
@@ -138,7 +139,7 @@ public class ApplicationLoader extends Application {
                 FileLog.d("screen state = " + isScreenOn);
             }
         } catch (Exception e) {
-            FileLog.e(e);
+            e.printStackTrace();
         }
 
         SharedConfig.loadConfig();
@@ -168,8 +169,7 @@ public class ApplicationLoader extends Application {
             ContactsController.getInstance(a).checkAppAccount();
             DownloadController.getInstance(a);
         }
-
-        WearDataLayerListenerService.updateWatchConnectionState();
+        ChatThemeController.init();
     }
 
     public ApplicationLoader() {
@@ -243,6 +243,7 @@ public class ApplicationLoader extends Application {
         try {
             LocaleController.getInstance().onDeviceConfigurationChange(newConfig);
             AndroidUtilities.checkDisplaySize(applicationContext, newConfig);
+            VideoCapturerDevice.checkScreenCapturerSize();
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -263,18 +264,23 @@ public class ApplicationLoader extends Application {
                 }
                 Utilities.globalQueue.postRunnable(() -> {
                     try {
-                        FirebaseInstanceId.getInstance().getInstanceId().addOnSuccessListener(instanceIdResult -> {
-                            String token = instanceIdResult.getToken();
-                            if (!TextUtils.isEmpty(token)) {
-                                GcmPushListenerService.sendRegistrationToServer(token);
-                            }
-                        }).addOnFailureListener(e -> {
-                            if (BuildVars.LOGS_ENABLED) {
-                                FileLog.d("Failed to get regid");
-                            }
-                            SharedConfig.pushStringStatus = "__FIREBASE_FAILED__";
-                            GcmPushListenerService.sendRegistrationToServer(null);
-                        });
+                        SharedConfig.pushStringGetTimeStart = SystemClock.elapsedRealtime();
+                        FirebaseMessaging.getInstance().getToken()
+                                .addOnCompleteListener(task -> {
+                                    SharedConfig.pushStringGetTimeEnd = SystemClock.elapsedRealtime();
+                                    if (!task.isSuccessful()) {
+                                        if (BuildVars.LOGS_ENABLED) {
+                                            FileLog.d("Failed to get regid");
+                                        }
+                                        SharedConfig.pushStringStatus = "__FIREBASE_FAILED__";
+                                        GcmPushListenerService.sendRegistrationToServer(null);
+                                        return;
+                                    }
+                                    String token = task.getResult();
+                                    if (!TextUtils.isEmpty(token)) {
+                                        GcmPushListenerService.sendRegistrationToServer(token);
+                                    }
+                                });
                     } catch (Throwable e) {
                         FileLog.e(e);
                     }

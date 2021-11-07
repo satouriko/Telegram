@@ -49,6 +49,7 @@ import org.xml.sax.helpers.DefaultHandler;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.InputStream;
 import java.io.StringReader;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
@@ -99,13 +100,12 @@ public class SvgHelper {
 
     public static class SvgDrawable extends Drawable {
 
-        private ArrayList<Object> commands = new ArrayList<>();
-        private HashMap<Object, Paint> paints = new HashMap<>();
-        private int width;
-        private int height;
+        protected ArrayList<Object> commands = new ArrayList<>();
+        protected HashMap<Object, Paint> paints = new HashMap<>();
+        protected int width;
+        protected int height;
         private static int[] parentPosition = new int[2];
 
-        private Shader backgroundGradient;
         private Bitmap backgroundBitmap;
         private Canvas backgroundCanvas;
         private LinearGradient placeholderGradient;
@@ -119,7 +119,9 @@ public class SvgHelper {
         private int currentColor;
         private String currentColorKey;
         private float colorAlpha;
-        private float crossfadeAlpha;
+        private float crossfadeAlpha = 1.0f;
+
+        private boolean aspectFill = true;
 
         @Override
         public int getIntrinsicHeight() {
@@ -131,6 +133,16 @@ public class SvgHelper {
             return height;
         }
 
+        public void setAspectFill(boolean value) {
+            aspectFill = value;
+        }
+
+        public void overrideWidthAndHeight(int w, int h) {
+            width = w;
+            height = h;
+        }
+
+
         @Override
         public void draw(Canvas canvas) {
             if (currentColorKey != null) {
@@ -139,9 +151,12 @@ public class SvgHelper {
             Rect bounds = getBounds();
             float scaleX = bounds.width() / (float) width;
             float scaleY = bounds.height() / (float) height;
-            float scale = Math.max(scaleX, scaleY);
+            float scale = aspectFill ? Math.max(scaleX, scaleY) : Math.min(scaleX, scaleY);
             canvas.save();
             canvas.translate(bounds.left, bounds.top);
+            if (!aspectFill) {
+                canvas.translate((bounds.width() - width * scale) / 2, (bounds.height() - height * scale) / 2);
+            }
             canvas.scale(scale, scale);
             for (int a = 0, N = commands.size(); a < N; a++) {
                 Object object = commands.get(a);
@@ -247,6 +262,7 @@ public class SvgHelper {
                 color = Color.argb((int) (Color.alpha(color) / 2 * colorAlpha), Color.red(color), Color.green(color), Color.blue(color));
                 float centerX = (1.0f - w) / 2;
                 placeholderGradient = new LinearGradient(0, 0, gradientWidth, 0, new int[]{0x00000000, 0x00000000, color, 0x00000000, 0x00000000}, new float[]{0.0f, centerX - w / 2.0f, centerX, centerX + w / 2.0f, 1.0f}, Shader.TileMode.REPEAT);
+                Shader backgroundGradient;
                 if (Build.VERSION.SDK_INT >= 28) {
                     backgroundGradient = new LinearGradient(0, 0, gradientWidth, 0, new int[]{color, color}, null, Shader.TileMode.REPEAT);
                 } else {
@@ -260,9 +276,28 @@ public class SvgHelper {
                 placeholderMatrix = new Matrix();
                 placeholderGradient.setLocalMatrix(placeholderMatrix);
                 for (Paint paint : paints.values()) {
-                    paint.setShader(new ComposeShader(placeholderGradient, backgroundGradient, PorterDuff.Mode.ADD));
+                    if (Build.VERSION.SDK_INT <= 22) {
+                        paint.setShader(backgroundGradient);
+                    } else {
+                        paint.setShader(new ComposeShader(placeholderGradient, backgroundGradient, PorterDuff.Mode.ADD));
+                    }
                 }
             }
+        }
+    }
+
+    public static Bitmap getBitmap(int res, int width, int height, int color) {
+        try (InputStream stream = ApplicationLoader.applicationContext.getResources().openRawResource(res)) {
+            SAXParserFactory spf = SAXParserFactory.newInstance();
+            SAXParser sp = spf.newSAXParser();
+            XMLReader xr = sp.getXMLReader();
+            SVGHandler handler = new SVGHandler(width, height, color, false);
+            xr.setContentHandler(handler);
+            xr.parse(new InputSource(stream));
+            return handler.getBitmap();
+        } catch (Exception e) {
+            FileLog.e(e);
+            return null;
         }
     }
 
@@ -271,7 +306,7 @@ public class SvgHelper {
             SAXParserFactory spf = SAXParserFactory.newInstance();
             SAXParser sp = spf.newSAXParser();
             XMLReader xr = sp.getXMLReader();
-            SVGHandler handler = new SVGHandler(width, height, white, false);
+            SVGHandler handler = new SVGHandler(width, height, white ? 0xffffffff : null, false);
             xr.setContentHandler(handler);
             xr.parse(new InputSource(stream));
             return handler.getBitmap();
@@ -286,7 +321,7 @@ public class SvgHelper {
             SAXParserFactory spf = SAXParserFactory.newInstance();
             SAXParser sp = spf.newSAXParser();
             XMLReader xr = sp.getXMLReader();
-            SVGHandler handler = new SVGHandler(width, height, white, false);
+            SVGHandler handler = new SVGHandler(width, height, white ? 0xffffffff : null, false);
             xr.setContentHandler(handler);
             xr.parse(new InputSource(new StringReader(xml)));
             return handler.getBitmap();
@@ -301,9 +336,24 @@ public class SvgHelper {
             SAXParserFactory spf = SAXParserFactory.newInstance();
             SAXParser sp = spf.newSAXParser();
             XMLReader xr = sp.getXMLReader();
-            SVGHandler handler = new SVGHandler(0, 0, false, true);
+            SVGHandler handler = new SVGHandler(0, 0, null, true);
             xr.setContentHandler(handler);
             xr.parse(new InputSource(new StringReader(xml)));
+            return handler.getDrawable();
+        } catch (Exception e) {
+            FileLog.e(e);
+            return null;
+        }
+    }
+
+    public static SvgDrawable getDrawable(int resId, int color) {
+        try {
+            SAXParserFactory spf = SAXParserFactory.newInstance();
+            SAXParser sp = spf.newSAXParser();
+            XMLReader xr = sp.getXMLReader();
+            SVGHandler handler = new SVGHandler(0, 0, color, true);
+            xr.setContentHandler(handler);
+            xr.parse(new InputSource(ApplicationLoader.applicationContext.getResources().openRawResource(resId)));
             return handler.getDrawable();
         } catch (Exception e) {
             FileLog.e(e);
@@ -897,16 +947,16 @@ public class SvgHelper {
         private Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
         private RectF rect = new RectF();
         private RectF rectTmp = new RectF();
-        private boolean whiteOnly;
+        private Integer paintColor;
 
         boolean pushed = false;
 
         private HashMap<String, StyleSet> globalStyles = new HashMap<>();
 
-        private SVGHandler(int dw, int dh, boolean white, boolean asDrawable) {
+        private SVGHandler(int dw, int dh, Integer color, boolean asDrawable) {
             desiredWidth = dw;
             desiredHeight = dh;
-            whiteOnly = white;
+            paintColor = color;
             if (asDrawable) {
                 drawable = new SvgDrawable();
             }
@@ -938,8 +988,8 @@ public class SvgHelper {
                     return true;
                 } else if (atts.getString("fill") == null && atts.getString("stroke") == null) {
                     paint.setStyle(Paint.Style.FILL);
-                    if (whiteOnly) {
-                        paint.setColor(0xffffffff);
+                    if (paintColor != null) {
+                        paint.setColor(paintColor);
                     } else {
                         paint.setColor(0xff000000);
                     }
@@ -984,8 +1034,8 @@ public class SvgHelper {
         }
 
         private void doColor(Properties atts, Integer color, boolean fillMode) {
-            if (whiteOnly) {
-                paint.setColor(0xffffffff);
+            if (paintColor != null) {
+                paint.setColor(paintColor);
             } else {
                 int c = (0xFFFFFF & color) | 0xFF000000;
                 paint.setColor(c);
@@ -1100,7 +1150,11 @@ public class SvgHelper {
                     Properties props = new Properties(atts, globalStyles);
                     if (doFill(props)) {
                         if (drawable != null) {
-                            drawable.addCommand(new RoundRect(new RectF(x, y, x + width, y + height), rx), paint);
+                            if (rx != null) {
+                                drawable.addCommand(new RoundRect(new RectF(x, y, x + width, y + height), rx), paint);
+                            } else {
+                                drawable.addCommand(new RectF(x, y, x + width, y + height), paint);
+                            }
                         } else {
                             if (rx != null) {
                                 rectTmp.set(x, y, x + width, y + height);
@@ -1112,7 +1166,11 @@ public class SvgHelper {
                     }
                     if (doStroke(props)) {
                         if (drawable != null) {
-                            drawable.addCommand(new RoundRect(new RectF(x, y, x + width, y + height), rx), paint);
+                            if (rx != null) {
+                                drawable.addCommand(new RoundRect(new RectF(x, y, x + width, y + height), rx), paint);
+                            } else {
+                                drawable.addCommand(new RectF(x, y, x + width, y + height), paint);
+                            }
                         } else {
                             if (rx != null) {
                                 rectTmp.set(x, y, x + width, y + height);
@@ -1676,7 +1734,7 @@ public class SvgHelper {
                 int num = encoded[i] & 0xff;
                 if (num >= 128 + 64) {
                     int start = num - 128 - 64;
-                    path.append("AACAAAAHAAALMAAAQASTAVAAAZaacaaaahaaalmaaaqastava.az0123456789-,".substring(start, start + 1));
+                    path.append("AACAAAAHAAALMAAAQASTAVAAAZaacaaaahaaalmaaaqastava.az0123456789-,".charAt(start));
                 } else {
                     if (num >= 128) {
                         path.append(',');

@@ -65,6 +65,7 @@ public class CameraController implements MediaRecorder.OnInfoListener {
     private boolean loadingCameras;
 
     private ArrayList<Runnable> onFinishCameraInitRunnables = new ArrayList<>();
+    CameraView recordingCurrentCameraView;
 
     private static volatile CameraController Instance = null;
 
@@ -238,6 +239,7 @@ public class CameraController implements MediaRecorder.OnInfoListener {
                     NotificationCenter.getGlobalInstance().postNotificationName(NotificationCenter.cameraInitied);
                 });
             } catch (Exception e) {
+                FileLog.e(e);
                 AndroidUtilities.runOnUIThread(() -> {
                     onFinishCameraInitRunnables.clear();
                     loadingCameras = false;
@@ -246,17 +248,12 @@ public class CameraController implements MediaRecorder.OnInfoListener {
                         AndroidUtilities.runOnUIThread(() -> initCamera(onInitRunnable, true), 1000);
                     }
                 });
-
             }
         });
     }
 
     public boolean isCameraInitied() {
         return cameraInitied && cameraInfos != null && !cameraInfos.isEmpty();
-    }
-
-    public void runOnThreadPool(Runnable runnable) {
-        threadPool.execute(runnable);
     }
 
     public void close(final CameraSession session, final CountDownLatch countDownLatch, final Runnable beforeDestroyRunnable) {
@@ -406,12 +403,12 @@ public class CameraController implements MediaRecorder.OnInfoListener {
                     BitmapFactory.Options options = new BitmapFactory.Options();
                     options.inJustDecodeBounds = true;
                     BitmapFactory.decodeByteArray(data, 0, data.length, options);
-                    float scaleFactor = Math.max((float) options.outWidth / AndroidUtilities.getPhotoSize(), (float) options.outHeight / AndroidUtilities.getPhotoSize());
-                    if (scaleFactor < 1) {
-                        scaleFactor = 1;
-                    }
+//                    float scaleFactor = Math.max((float) options.outWidth / AndroidUtilities.getPhotoSize(), (float) options.outHeight / AndroidUtilities.getPhotoSize());
+//                    if (scaleFactor < 1) {
+//                        scaleFactor = 1;
+//                    }
                     options.inJustDecodeBounds = false;
-                    options.inSampleSize = (int) scaleFactor;
+                //    options.inSampleSize = (int) scaleFactor;
                     options.inPurgeable = true;
                     bitmap = BitmapFactory.decodeByteArray(data, 0, data.length, options);
                 } catch (Throwable e) {
@@ -433,7 +430,7 @@ public class CameraController implements MediaRecorder.OnInfoListener {
                             outputStream.getFD().sync();
                             outputStream.close();
                             if (scaled != null) {
-                                ImageLoader.getInstance().putImageToCache(new BitmapDrawable(scaled), key);
+                                ImageLoader.getInstance().putImageToCache(new BitmapDrawable(scaled), key, false);
                             }
                             if (callback != null) {
                                 callback.run();
@@ -449,7 +446,7 @@ public class CameraController implements MediaRecorder.OnInfoListener {
                     outputStream.getFD().sync();
                     outputStream.close();
                     if (bitmap != null) {
-                        ImageLoader.getInstance().putImageToCache(new BitmapDrawable(bitmap), key);
+                        ImageLoader.getInstance().putImageToCache(new BitmapDrawable(bitmap), key, false);
                     }
                 } catch (Exception e) {
                     FileLog.e(e);
@@ -525,7 +522,7 @@ public class CameraController implements MediaRecorder.OnInfoListener {
                 }
                 Camera.Parameters params = camera.getParameters();
 
-                session.configureRoundCamera();
+                session.configureRoundCamera(true);
                 if (configureCallback != null) {
                     configureCallback.run();
                 }
@@ -591,13 +588,44 @@ public class CameraController implements MediaRecorder.OnInfoListener {
         });
     }
 
-    public void recordVideo(final CameraSession session, final File path, boolean mirror, final VideoTakeCallback callback, final Runnable onVideoStartRecord) {
+    public void recordVideo(final CameraSession session, final File path, boolean mirror, final VideoTakeCallback callback, final Runnable onVideoStartRecord, CameraView cameraView) {
         if (session == null) {
             return;
         }
-
         final CameraInfo info = session.cameraInfo;
         final Camera camera = info.camera;
+        if (cameraView != null) {
+            recordingCurrentCameraView = cameraView;
+            onVideoTakeCallback = callback;
+            recordedFile = path.getAbsolutePath();
+            threadPool.execute(() -> {
+                try {
+                    if (camera != null) {
+                        try {
+                            Camera.Parameters params = camera.getParameters();
+                            params.setFlashMode(session.getCurrentFlashMode().equals(Camera.Parameters.FLASH_MODE_ON) ? Camera.Parameters.FLASH_MODE_TORCH : Camera.Parameters.FLASH_MODE_OFF);
+                            camera.setParameters(params);
+                            session.onStartRecord();
+                        } catch (Exception e) {
+                            FileLog.e(e);
+                        }
+                        AndroidUtilities.runOnUIThread(() -> {
+                            cameraView.startRecording(path, this::finishRecordingVideo);
+
+                            if (onVideoStartRecord != null) {
+                                onVideoStartRecord.run();
+                            }
+                        });
+                    }
+                } catch (Exception e) {
+                    FileLog.e(e);
+                }
+            });
+
+            return;
+        }
+
+
         threadPool.execute(() -> {
             try {
                 if (camera != null) {
@@ -698,7 +726,7 @@ public class CameraController implements MediaRecorder.OnInfoListener {
             if (onVideoTakeCallback != null) {
                 String path = cacheFile.getAbsolutePath();
                 if (bitmapFinal != null) {
-                    ImageLoader.getInstance().putImageToCache(new BitmapDrawable(bitmapFinal), Utilities.MD5(path));
+                    ImageLoader.getInstance().putImageToCache(new BitmapDrawable(bitmapFinal), Utilities.MD5(path), false);
                 }
                 onVideoTakeCallback.onFinishVideoRecording(path, durationFinal);
                 onVideoTakeCallback = null;
@@ -722,6 +750,11 @@ public class CameraController implements MediaRecorder.OnInfoListener {
     }
 
     public void stopVideoRecording(final CameraSession session, final boolean abandon) {
+        if (recordingCurrentCameraView != null) {
+            recordingCurrentCameraView.stopRecording();
+            recordingCurrentCameraView = null;
+            return;
+        }
         threadPool.execute(() -> {
             try {
                 CameraInfo info = session.cameraInfo;
@@ -778,16 +811,21 @@ public class CameraController implements MediaRecorder.OnInfoListener {
     }
 
     public static Size chooseOptimalSize(List<Size> choices, int width, int height, Size aspectRatio) {
+        List<Size> bigEnoughWithAspectRatio = new ArrayList<>();
         List<Size> bigEnough = new ArrayList<>();
         int w = aspectRatio.getWidth();
         int h = aspectRatio.getHeight();
         for (int a = 0; a < choices.size(); a++) {
             Size option = choices.get(a);
             if (option.getHeight() == option.getWidth() * h / w && option.getWidth() >= width && option.getHeight() >= height) {
+                bigEnoughWithAspectRatio.add(option);
+            } else if (option.getHeight() * option.getWidth() <= width * height * 4) {
                 bigEnough.add(option);
             }
         }
-        if (bigEnough.size() > 0) {
+        if (bigEnoughWithAspectRatio.size() > 0) {
+            return Collections.min(bigEnoughWithAspectRatio, new CompareSizesByArea());
+        } else if (bigEnough.size() > 0) {
             return Collections.min(bigEnough, new CompareSizesByArea());
         } else {
             return Collections.max(choices, new CompareSizesByArea());
