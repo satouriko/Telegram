@@ -20,8 +20,8 @@ public class BuildVars {
     public static boolean USE_CLOUD_STRINGS = true;
     public static boolean CHECK_UPDATES = true;
     public static boolean NO_SCOPED_STORAGE = Build.VERSION.SDK_INT <= 29;
-    public static int BUILD_VERSION = 2466;
-    public static String BUILD_VERSION_STRING = "8.2.3";
+    public static int BUILD_VERSION = 2470;
+    public static String BUILD_VERSION_STRING = "8.2.7";
     public static int APP_ID = 1056817; //obtain your own APP_ID at https://core.telegram.org/api/obtaining_api_id
     public static String APP_HASH = "31511ac2e6289df4bc7d33a880e99475"; //obtain your own APP_HASH at https://core.telegram.org/api/obtaining_api_id
     public static String SMS_HASH = ""; //https://developers.google.com/identity/sms-retriever/overview
