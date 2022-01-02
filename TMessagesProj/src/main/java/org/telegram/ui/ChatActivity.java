@@ -20342,11 +20342,11 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
                             options.add(2);
                             icons.add(R.drawable.msg_forward);
                         }
-                        if (chatMode != MODE_SCHEDULED && !selectedObject.needDrawBluredPreview() && !selectedObject.isLiveLocation() && selectedObject.type != 16) {
+                        if (!selectedObject.isSponsored() && chatMode != MODE_SCHEDULED && !selectedObject.needDrawBluredPreview() && !selectedObject.isLiveLocation() && selectedObject.type != 16) {
                             boolean allowRepeat = currentUser != null
                                     || (currentChat != null && ChatObject.canSendMessages(currentChat));
                             allowRepeat = allowRepeat &&
-                                    (threadMessageObject == null || selectedObject.type == 0 || selectedObject.isAnimatedEmoji() || getMessageCaption(selectedObject, selectedObjectGroup) != null);
+                                    (!getMessagesController().isChatNoForwards(currentChat) && threadMessageObject == null || selectedObject.type == 0 || selectedObject.isAnimatedEmoji() || getMessageCaption(selectedObject, selectedObjectGroup) != null);
                             if (allowRepeat) {
                                 items.add(LocaleController.getString("Repeat", R.string.Repeat));
                                 options.add(94);
@@ -22079,8 +22079,20 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
                 } else {
                     messages.add(selectedObject);
                 }
-                if (threadMessageObject == null)
-                    forwardMessages(messages, false, false, true, 0);
+                if (threadMessageObject == null) {
+                    if (!getMessagesController().isChatNoForwards(currentChat)) {
+                        forwardMessages(messages, false, false, true, 0);
+                    } else {
+                        CharSequence caption = getMessageCaption(selectedObject, selectedObjectGroup);
+                        if (caption == null) {
+                            caption = getMessageContent(selectedObject, 0, false);
+                        }
+                        if (caption != null) {
+                            getSendMessagesHelper().sendMessage(caption.toString(), dialog_id, null, null, null, false,
+                                    null, null, null, true, 0, null);
+                        }
+                    }
+                }
                 else if (selectedObject.type == 0 || selectedObject.isAnimatedEmoji() || getMessageCaption(selectedObject, selectedObjectGroup) != null) {
                     CharSequence caption = getMessageCaption(selectedObject, selectedObjectGroup);
                     if (caption == null) {
