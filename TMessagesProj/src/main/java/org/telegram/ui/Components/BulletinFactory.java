@@ -1,6 +1,7 @@
 package org.telegram.ui.Components;
 
 import android.content.Context;
+import android.os.Build;
 import android.widget.FrameLayout;
 
 import androidx.annotation.CheckResult;
@@ -188,6 +189,9 @@ public final class BulletinFactory {
 
     @CheckResult
     public Bulletin createCopyBulletin(String message) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            return new Bulletin.EmptyBulletin();
+        }
         final Bulletin.LottieLayout layout = new Bulletin.LottieLayout(getContext(), null);
         layout.setAnimation(R.raw.copy, 36, 36, "NULL ROTATION", "Back", "Front");
         layout.textView.setText(message);
@@ -196,6 +200,9 @@ public final class BulletinFactory {
 
     @CheckResult
     public Bulletin createCopyLinkBulletin(boolean isPrivate, Theme.ResourcesProvider resourcesProvider) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            return new Bulletin.EmptyBulletin();
+        }
         if (isPrivate) {
             final Bulletin.TwoLineLottieLayout layout = new Bulletin.TwoLineLottieLayout(getContext(), resourcesProvider);
             layout.setAnimation(R.raw.voip_invite, 36, 36, "Wibe", "Circle");
