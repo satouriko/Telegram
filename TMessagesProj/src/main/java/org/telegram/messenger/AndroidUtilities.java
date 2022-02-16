@@ -2270,7 +2270,7 @@ public class AndroidUtilities {
     }
 
     public static void appCenterLog(Throwable e) {
-       
+
     }
 
     public static void addToClipboard(CharSequence str) {
