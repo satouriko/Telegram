@@ -35,12 +35,14 @@ import org.telegram.ui.ActionBar.Theme;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 
 public class ReactedUsersListView extends FrameLayout {
     public final static int VISIBLE_ITEMS = 6;
     public final static int ITEM_HEIGHT_DP = 48;
 
+    private int predictiveCount;
     private int currentAccount;
     private MessageObject message;
     private String filter;
@@ -51,7 +53,7 @@ public class ReactedUsersListView extends FrameLayout {
     private FlickerLoadingView loadingView;
 
     private List<TLRPC.TL_messagePeerReaction> userReactions = new ArrayList<>();
-    private LongSparseArray<TLRPC.User> users = new LongSparseArray<>();
+    private LongSparseArray<TLRPC.TL_messagePeerReaction> peerReactionMap = new LongSparseArray<>();
     private String offset;
     private boolean isLoading, isLoaded, canLoadMore = true;
     private boolean onlySeenNow;
@@ -64,7 +66,7 @@ public class ReactedUsersListView extends FrameLayout {
         this.currentAccount = currentAccount;
         this.message = message;
         this.filter = reactionCount == null ? null : reactionCount.reaction;
-
+        predictiveCount = reactionCount == null ? VISIBLE_ITEMS : reactionCount.count;
         listView = new RecyclerListView(context, resourcesProvider) {
             @Override
             protected void onMeasure(int widthSpec, int heightSpec) {
@@ -126,16 +128,19 @@ public class ReactedUsersListView extends FrameLayout {
     public ReactedUsersListView setSeenUsers(List<TLRPC.User> users) {
         List<TLRPC.TL_messagePeerReaction> nr = new ArrayList<>(users.size());
         for (TLRPC.User u : users) {
-            if (this.users.get(u.id) != null) continue;
-            this.users.put(u.id, u);
+            if (peerReactionMap.get(u.id) != null) {
+                continue;
+            }
             TLRPC.TL_messagePeerReaction r = new TLRPC.TL_messagePeerReaction();
             r.reaction = null;
             r.peer_id = new TLRPC.TL_peerUser();
             r.peer_id.user_id = u.id;
+            peerReactionMap.put(MessageObject.getPeerId(r.peer_id), r);
             nr.add(r);
         }
-        if (userReactions.isEmpty())
+        if (userReactions.isEmpty()) {
             onlySeenNow = true;
+        }
         userReactions.addAll(nr);
         adapter.notifyDataSetChanged();
         updateHeight();
@@ -166,30 +171,34 @@ public class ReactedUsersListView extends FrameLayout {
         if (offset != null)
             getList.flags |= 2;
         ConnectionsManager.getInstance(currentAccount).sendRequest(getList, (response, error) -> {
-            if (response instanceof TLRPC.TL_messages_messageReactionsList) {
-                TLRPC.TL_messages_messageReactionsList l = (TLRPC.TL_messages_messageReactionsList) response;
+            AndroidUtilities.runOnUIThread(() -> NotificationCenter.getInstance(currentAccount).doOnIdle(() -> {
+                if (response instanceof TLRPC.TL_messages_messageReactionsList) {
+                    TLRPC.TL_messages_messageReactionsList res = (TLRPC.TL_messages_messageReactionsList) response;
 
-                for (TLRPC.User u : l.users) {
-                    MessagesController.getInstance(currentAccount).putUser(u, false);
-                    users.put(u.id, u);
-                }
+                    for (TLRPC.User u : res.users) {
+                        MessagesController.getInstance(currentAccount).putUser(u, false);
+                    }
 
-                // It's safer to create a new list to prevent inconsistency
-                int prev = userReactions.size();
-                List<TLRPC.TL_messagePeerReaction> newReactions = new ArrayList<>(userReactions.size() + l.reactions.size());
-                newReactions.addAll(userReactions);
-                newReactions.addAll(l.reactions);
+                    for (int i = 0; i < res.reactions.size(); i++) {
+                        userReactions.add(res.reactions.get(i));
+                        long peerId = MessageObject.getPeerId(res.reactions.get(i).peer_id);
+                        TLRPC.TL_messagePeerReaction reaction = peerReactionMap.get(peerId);
+                        if (reaction != null) {
+                            userReactions.remove(reaction);
+                        }
+                        peerReactionMap.put(peerId, res.reactions.get(i));
 
-                if (onlySeenNow) {
-                    Collections.sort(newReactions, (o1, o2) -> Integer.compare(o1.reaction != null ? 1 : 0, o2.reaction != null ? 1 : 0));
-                }
+                    }
 
-                AndroidUtilities.runOnUIThread(() -> NotificationCenter.getInstance(currentAccount).doOnIdle(() -> {
-                    userReactions = newReactions;
+                    if (onlySeenNow) {
+                        Collections.sort(userReactions, Comparator.comparingInt(o -> o.reaction != null ? 0 : 1));
+                    }
+
                     if (onlySeenNow) {
                         onlySeenNow = false;
-                        adapter.notifyDataSetChanged();
-                    } else adapter.notifyItemRangeInserted(prev, l.reactions.size());
+                    }
+
+                    adapter.notifyDataSetChanged();
 
                     if (!isLoaded) {
                         ValueAnimator anim = ValueAnimator.ofFloat(0, 1).setDuration(150);
@@ -211,22 +220,28 @@ public class ReactedUsersListView extends FrameLayout {
 
                         isLoaded = true;
                     }
-                    offset = l.next_offset;
+                    offset = res.next_offset;
                     if (offset == null)
                         canLoadMore = false;
                     isLoading = false;
-                }));
-            } else isLoading = false;
+                } else {
+                    isLoading = false;
+                }
+            }));
         }, ConnectionsManager.RequestFlagInvokeAfter);
     }
 
     private void updateHeight() {
         if (onHeightChangedListener != null) {
             int h;
+            int count = userReactions.size();
+            if (count == 0) {
+                count = predictiveCount;
+            }
             if (listView.getMeasuredHeight() != 0) {
-                h = Math.min(listView.getMeasuredHeight(), AndroidUtilities.dp(ITEM_HEIGHT_DP * Math.min(userReactions.size(), VISIBLE_ITEMS)));
+                h = Math.min(listView.getMeasuredHeight(), AndroidUtilities.dp(ITEM_HEIGHT_DP * count));
             } else {
-                h = AndroidUtilities.dp(ITEM_HEIGHT_DP * Math.min(userReactions.size(), VISIBLE_ITEMS));
+                h = AndroidUtilities.dp(ITEM_HEIGHT_DP * count);
             }
             onHeightChangedListener.onHeightChanged(ReactedUsersListView.this, h);
         }
@@ -267,7 +282,10 @@ public class ReactedUsersListView extends FrameLayout {
         }
 
         void setUserReaction(TLRPC.TL_messagePeerReaction reaction) {
-            TLRPC.User u = users.get(MessageObject.getPeerId(reaction.peer_id));
+            TLRPC.User u = MessagesController.getInstance(currentAccount).getUser(MessageObject.getPeerId(reaction.peer_id));
+            if (u == null) {
+                return;
+            }
             avatarDrawable.setInfo(u);
             titleView.setText(UserObject.getUserName(u));
             avatarView.setImage(ImageLocation.getForUser(u, ImageLocation.TYPE_SMALL), "50_50", avatarDrawable, u);
@@ -277,7 +295,11 @@ public class ReactedUsersListView extends FrameLayout {
                 if (r != null) {
                     SvgHelper.SvgDrawable svgThumb = DocumentObject.getSvgThumb(r.static_icon.thumbs, Theme.key_windowBackgroundGray, 1.0f);
                     reactView.setImage(ImageLocation.getForDocument(r.static_icon), "50_50", "webp", svgThumb, r);
+                } else {
+                    reactView.setImageDrawable(null);
                 }
+            } else {
+                reactView.setImageDrawable(null);
             }
         }
 

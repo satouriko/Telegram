@@ -75,6 +75,7 @@ import org.telegram.ui.Cells.ChatListCell;
 import org.telegram.ui.Cells.ChatMessageCell;
 import org.telegram.ui.Cells.HeaderCell;
 import org.telegram.ui.Cells.NotificationsCheckCell;
+import org.telegram.ui.Cells.RadioButtonCell;
 import org.telegram.ui.Cells.ShadowSectionCell;
 import org.telegram.ui.Cells.TextCell;
 import org.telegram.ui.Cells.TextCheckCell;
@@ -134,6 +135,9 @@ public class ThemeActivity extends BaseFragment implements NotificationCenter.No
     private int raiseToSpeakRow;
     private int sendByEnterRow;
     private int saveToGalleryRow;
+    private int saveToGalleryOption1Row;
+    private int saveToGalleryOption2Row;
+    private int saveToGallerySectionRow;
     private int distanceRow;
     private int enableAnimationsRow;
     private int settings2Row;
@@ -508,6 +512,9 @@ public class ThemeActivity extends BaseFragment implements NotificationCenter.No
         raiseToSpeakRow = -1;
         sendByEnterRow = -1;
         saveToGalleryRow = -1;
+        saveToGalleryOption1Row = -1;
+        saveToGalleryOption2Row = -1;
+        saveToGallerySectionRow = -1;
         distanceRow = -1;
         settings2Row = -1;
         stickersRow = -1;
@@ -805,7 +812,7 @@ public class ThemeActivity extends BaseFragment implements NotificationCenter.No
             sharingTheme = (Theme.ThemeInfo) args[0];
             sharingAccent = (Theme.ThemeAccent) args[1];
             sharingProgressDialog = new AlertDialog(getParentActivity(), 3);
-            sharingProgressDialog.setCanCacnel(true);
+            sharingProgressDialog.setCanCancel(true);
             showDialog(sharingProgressDialog, dialog -> {
                 sharingProgressDialog = null;
                 sharingTheme = null;
@@ -1251,7 +1258,7 @@ public class ThemeActivity extends BaseFragment implements NotificationCenter.No
                 LocationManager lm = (LocationManager) ApplicationLoader.applicationContext.getSystemService(Context.LOCATION_SERVICE);
                 if (!lm.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
                     AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
-                    builder.setTitle(LocaleController.getString("GpsDisabledAlertTitle", R.string.GpsDisabledAlertTitle));
+                    builder.setTopAnimation(R.raw.permission_request_location, AlertsCreator.PERMISSIONS_REQUEST_TOP_ICON_SIZE, false, Theme.getColor(Theme.key_dialogTopBackground));
                     builder.setMessage(LocaleController.getString("GpsDisabledAlertText", R.string.GpsDisabledAlertText));
                     builder.setPositiveButton(LocaleController.getString("ConnectingToProxyEnable", R.string.ConnectingToProxyEnable), (dialog, id) -> {
                         if (getParentActivity() == null) {
@@ -1357,33 +1364,6 @@ public class ThemeActivity extends BaseFragment implements NotificationCenter.No
         LocationManager locationManager = (LocationManager) ApplicationLoader.applicationContext.getSystemService(Context.LOCATION_SERVICE);
         locationManager.removeUpdates(gpsLocationListener);
         locationManager.removeUpdates(networkLocationListener);
-    }
-
-    private void showPermissionAlert(boolean byButton) {
-        if (getParentActivity() == null) {
-            return;
-        }
-        AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
-        builder.setTitle(LocaleController.getString("AppName", R.string.AppName));
-        if (byButton) {
-            builder.setMessage(LocaleController.getString("PermissionNoLocationPosition", R.string.PermissionNoLocationPosition));
-        } else {
-            builder.setMessage(LocaleController.getString("PermissionNoLocation", R.string.PermissionNoLocation));
-        }
-        builder.setNegativeButton(LocaleController.getString("PermissionOpenSettings", R.string.PermissionOpenSettings), (dialog, which) -> {
-            if (getParentActivity() == null) {
-                return;
-            }
-            try {
-                Intent intent = new Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
-                intent.setData(Uri.parse("package:" + ApplicationLoader.applicationContext.getPackageName()));
-                getParentActivity().startActivity(intent);
-            } catch (Exception e) {
-                FileLog.e(e);
-            }
-        });
-        builder.setPositiveButton(LocaleController.getString("OK", R.string.OK), null);
-        showDialog(builder.create());
     }
 
     private String getLocationSunString() {
@@ -2018,6 +1998,9 @@ public class ThemeActivity extends BaseFragment implements NotificationCenter.No
                 case 18:
                     view = new TextSettingsCell(mContext);
                     break;
+                case 19:
+                    view = new RadioButtonCell(mContext);
+                    break;
             }
             return new RecyclerListView.Holder(view);
         }
@@ -2082,7 +2065,7 @@ public class ThemeActivity extends BaseFragment implements NotificationCenter.No
                     break;
                 }
                 case 3: {
-                    if (position == stickersSection2Row || position == nightTypeInfoRow && themeInfoRow == -1 || position == themeInfoRow && nightTypeInfoRow != -1) {
+                    if (position == stickersSection2Row || position == nightTypeInfoRow && themeInfoRow == -1 || position == themeInfoRow && nightTypeInfoRow != -1 || position == saveToGallerySectionRow) {
                         holder.itemView.setBackgroundDrawable(Theme.getThemedDrawable(mContext, R.drawable.greydivider_bottom, Theme.key_windowBackgroundGrayShadow));
                     } else {
                         holder.itemView.setBackgroundDrawable(Theme.getThemedDrawable(mContext, R.drawable.greydivider, Theme.key_windowBackgroundGrayShadow));
@@ -2231,6 +2214,16 @@ public class ThemeActivity extends BaseFragment implements NotificationCenter.No
                     }
                     break;
                 }
+                case 19:{
+                    RadioButtonCell radioCell = (RadioButtonCell) holder.itemView;
+                    if (position == saveToGalleryOption1Row) {
+                        radioCell.setTextAndValue("save media only from peer chats", "",true, false);
+                    } else {
+                        radioCell.setTextAndValue("save media from all chats", "",true, false);
+                    }
+
+                    break;
+                }
             }
         }
 
@@ -2255,7 +2248,7 @@ public class ThemeActivity extends BaseFragment implements NotificationCenter.No
                 return 2;
             } else if (position == themeInfoRow || position == nightTypeInfoRow || position == scheduleFromToInfoRow ||
                     position == stickersSection2Row || position == settings2Row || position == newThemeInfoRow ||
-                    position == chatListInfoRow || position == bubbleRadiusInfoRow || position == swipeGestureInfoRow) {
+                    position == chatListInfoRow || position == bubbleRadiusInfoRow || position == swipeGestureInfoRow || position == saveToGallerySectionRow) {
                 return 3;
             } else if (position == nightDisabledRow || position == nightScheduledRow || position == nightAutomaticRow || position == nightSystemDefaultRow) {
                 return 4;
@@ -2291,6 +2284,8 @@ public class ThemeActivity extends BaseFragment implements NotificationCenter.No
                 return 17;
             } else if (position == reactionsDoubleTapRow) {
                 return 18;
+            } else if (position == saveToGalleryOption1Row || position == saveToGalleryOption2Row) {
+                return 19;
             }
             return 1;
         }

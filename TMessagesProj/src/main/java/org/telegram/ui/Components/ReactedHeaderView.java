@@ -100,7 +100,7 @@ public class ReactedHeaderView extends FrameLayout {
             MessagesController ctrl = MessagesController.getInstance(currentAccount);
             TLRPC.Chat chat = ctrl.getChat(message.getChatId());
             TLRPC.ChatFull chatInfo = ctrl.getChatFull(message.getChatId());
-            boolean showSeen = chat != null && message.isOutOwner() && message.isSent() && !message.isEditing() && !message.isSending() && !message.isSendError() && !message.isContentUnread() && !message.isUnread() && (ConnectionsManager.getInstance(currentAccount).getCurrentTime() - message.messageOwner.date < 7 * 86400)  && (ChatObject.isMegagroup(chat) || !ChatObject.isChannel(chat)) && chatInfo != null && chatInfo.participants_count < MessagesController.getInstance(currentAccount).chatReadMarkSizeThreshold && !(message.messageOwner.action instanceof TLRPC.TL_messageActionChatJoinedByRequest);
+            boolean showSeen = chat != null && message.isOutOwner() && message.isSent() && !message.isEditing() && !message.isSending() && !message.isSendError() && !message.isContentUnread() && !message.isUnread() && (ConnectionsManager.getInstance(currentAccount).getCurrentTime() - message.messageOwner.date < 7 * 86400)  && (ChatObject.isMegagroup(chat) || !ChatObject.isChannel(chat)) && chatInfo != null && chatInfo.participants_count <= MessagesController.getInstance(currentAccount).chatReadMarkSizeThreshold && !(message.messageOwner.action instanceof TLRPC.TL_messageActionChatJoinedByRequest);
 
             if (showSeen) {
                 TLRPC.TL_messages_getMessageReadParticipants req = new TLRPC.TL_messages_getMessageReadParticipants();
@@ -182,9 +182,11 @@ public class ReactedHeaderView extends FrameLayout {
     private void loadReactions() {
         MessagesController ctrl = MessagesController.getInstance(currentAccount);
         TLRPC.TL_messages_getMessageReactionsList getList = new TLRPC.TL_messages_getMessageReactionsList();
-        getList.peer = ctrl.getInputPeer(dialogId);
+        getList.peer = ctrl.getInputPeer(message.getDialogId());
         getList.id = message.getId();
         getList.limit = 3;
+        getList.reaction = null;
+        getList.offset = null;
         ConnectionsManager.getInstance(currentAccount).sendRequest(getList, (response, error) -> {
             if (response instanceof TLRPC.TL_messages_messageReactionsList) {
                 TLRPC.TL_messages_messageReactionsList list = (TLRPC.TL_messages_messageReactionsList) response;

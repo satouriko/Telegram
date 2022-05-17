@@ -13,8 +13,8 @@
 #include "p2p/base/dtls_transport_factory.h"
 #include "pc/dtls_srtp_transport.h"
 #include "pc/dtls_transport.h"
+#include "modules/rtp_rtcp/source/rtp_util.h"
 #include "media/sctp/sctp_transport_factory.h"
-#include "modules/rtp_rtcp/source/rtp_utility.h"
 #include "modules/rtp_rtcp/source/byte_io.h"
 #include "platform/PlatformInterface.h"
 #include "TurnCustomizerImpl.h"
@@ -318,13 +318,13 @@ _dataChannelMessageReceived(dataChannelMessageReceived),
 _audioActivityUpdated(audioActivityUpdated) {
     assert(_threads->getNetworkThread()->IsCurrent());
 
-    _localIceParameters = PeerIceParameters(rtc::CreateRandomString(cricket::ICE_UFRAG_LENGTH), rtc::CreateRandomString(cricket::ICE_PWD_LENGTH));
+    _localIceParameters = PeerIceParameters(rtc::CreateRandomString(cricket::ICE_UFRAG_LENGTH), rtc::CreateRandomString(cricket::ICE_PWD_LENGTH), false);
 
     _localCertificate = rtc::RTCCertificateGenerator::GenerateCertificate(rtc::KeyParams(rtc::KT_ECDSA), absl::nullopt);
 
     _networkMonitorFactory = PlatformInterface::SharedInstance()->createNetworkMonitorFactory();
 
-    _socketFactory.reset(new rtc::BasicPacketSocketFactory(_threads->getNetworkThread()));
+    _socketFactory.reset(new rtc::BasicPacketSocketFactory(_threads->getNetworkThread()->socketserver()));
     _networkManager = std::make_unique<rtc::BasicNetworkManager>(_networkMonitorFactory.get());
     _asyncResolverFactory = std::make_unique<webrtc::BasicAsyncResolverFactory>();
 
@@ -362,9 +362,9 @@ void GroupNetworkManager::resetDtlsSrtpTransport() {
     _transportChannel.reset(new cricket::P2PTransportChannel("transport", 0, _portAllocator.get(), _asyncResolverFactory.get(), nullptr));
 
     cricket::IceConfig iceConfig;
-    iceConfig.continual_gathering_policy = cricket::GATHER_ONCE;
+    iceConfig.continual_gathering_policy = cricket::GATHER_CONTINUALLY;
     iceConfig.prioritize_most_likely_candidate_pairs = true;
-    iceConfig.regather_on_failed_networks_interval = 8000;
+    iceConfig.regather_on_failed_networks_interval = 2000;
     _transportChannel->SetIceConfig(iceConfig);
 
     cricket::IceParameters localIceParameters(
@@ -452,7 +452,7 @@ void GroupNetworkManager::stop() {
     _transportChannel.reset();
     _portAllocator.reset();
 
-    _localIceParameters = PeerIceParameters(rtc::CreateRandomString(cricket::ICE_UFRAG_LENGTH), rtc::CreateRandomString(cricket::ICE_PWD_LENGTH));
+    _localIceParameters = PeerIceParameters(rtc::CreateRandomString(cricket::ICE_UFRAG_LENGTH), rtc::CreateRandomString(cricket::ICE_PWD_LENGTH), false);
 
     _localCertificate = rtc::RTCCertificateGenerator::GenerateCertificate(rtc::KeyParams(rtc::KT_ECDSA), absl::nullopt);
 

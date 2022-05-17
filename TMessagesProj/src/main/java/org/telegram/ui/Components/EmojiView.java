@@ -75,6 +75,7 @@ import org.telegram.messenger.Emoji;
 import org.telegram.messenger.EmojiData;
 import org.telegram.messenger.FileLoader;
 import org.telegram.messenger.FileLog;
+import org.telegram.messenger.ImageLoader;
 import org.telegram.messenger.ImageLocation;
 import org.telegram.messenger.ImageReceiver;
 import org.telegram.messenger.LocaleController;
@@ -447,9 +448,15 @@ public class EmojiView extends FrameLayout implements NotificationCenter.Notific
     @Override
     public void setEnabled(boolean enabled) {
         super.setEnabled(enabled);
-        stickersSearchField.searchEditText.setEnabled(enabled);
-        gifSearchField.searchEditText.setEnabled(enabled);
-        emojiSearchField.searchEditText.setEnabled(enabled);
+        if (stickersSearchField != null) {
+            stickersSearchField.searchEditText.setEnabled(enabled);
+        }
+        if (gifSearchField != null) {
+            gifSearchField.searchEditText.setEnabled(enabled);
+        }
+        if (emojiSearchField != null) {
+            emojiSearchField.searchEditText.setEnabled(enabled);
+        }
     }
 
     private class SearchField extends FrameLayout {
@@ -488,12 +495,16 @@ public class EmojiView extends FrameLayout implements NotificationCenter.Notific
 
             clearSearchImageView = new ImageView(context);
             clearSearchImageView.setScaleType(ImageView.ScaleType.CENTER);
-            clearSearchImageView.setImageDrawable(progressDrawable = new CloseProgressDrawable2());
+            clearSearchImageView.setImageDrawable(progressDrawable = new CloseProgressDrawable2() {
+                @Override
+                protected int getCurrentColor() {
+                    return getThemedColor(Theme.key_chat_emojiSearchIcon);
+                }
+            });
             progressDrawable.setSide(AndroidUtilities.dp(7));
             clearSearchImageView.setScaleX(0.1f);
             clearSearchImageView.setScaleY(0.1f);
             clearSearchImageView.setAlpha(0.0f);
-            clearSearchImageView.setColorFilter(new PorterDuffColorFilter(getThemedColor(Theme.key_chat_emojiSearchIcon), PorterDuff.Mode.MULTIPLY));
             addView(clearSearchImageView, LayoutHelper.createFrame(36, 36, Gravity.RIGHT | Gravity.TOP, 14, 14, 14, 0));
             clearSearchImageView.setOnClickListener(v -> {
                 searchEditText.setText("");
@@ -829,6 +840,7 @@ public class EmojiView extends FrameLayout implements NotificationCenter.Notific
         public ImageViewEmoji(Context context) {
             super(context);
             setScaleType(ImageView.ScaleType.CENTER);
+            setBackground(Theme.createRadSelectorDrawable(getThemedColor(Theme.key_listSelector), AndroidUtilities.dp(2), AndroidUtilities.dp(2)));
         }
 
         private void sendEmoji(String override) {
@@ -1263,6 +1275,7 @@ public class EmojiView extends FrameLayout implements NotificationCenter.Notific
         emojiGridView.setBottomGlowOffset(AndroidUtilities.dp(48));
         emojiGridView.setPadding(0, AndroidUtilities.dp(38), 0, AndroidUtilities.dp(44));
         emojiGridView.setGlowColor(getThemedColor(Theme.key_chat_emojiPanelBackground));
+        emojiGridView.setSelectorDrawableColor(0);
         emojiGridView.setClipToPadding(false);
         emojiLayoutManager.setSpanSizeLookup(new GridLayoutManager.SpanSizeLookup() {
             @Override
@@ -2016,7 +2029,7 @@ public class EmojiView extends FrameLayout implements NotificationCenter.Notific
                 }
             });
 
-            typeTabs = new PagerSlidingTabStrip(context);
+            typeTabs = new PagerSlidingTabStrip(context, resourcesProvider);
             typeTabs.setViewPager(pager);
             typeTabs.setShouldExpand(false);
             typeTabs.setIndicatorHeight(0);
@@ -2304,8 +2317,25 @@ public class EmojiView extends FrameLayout implements NotificationCenter.Notific
     @Override
     public void setTranslationY(float translationY) {
         super.setTranslationY(translationY);
-        updateBottomTabContainerPosition();
         updateStickerTabsPosition();
+        updateBottomTabContainerPosition();
+    }
+    private void updateBottomTabContainerPosition() {
+        if (bottomTabContainer.getTag() == null && (delegate == null || !delegate.isSearchOpened()) && (pager == null || pager.getCurrentItem() != 0)) {
+            View parent = (View) getParent();
+            if (parent != null) {
+                float y = getY() - parent.getHeight();
+                if (getLayoutParams().height > 0) {
+                    y += getLayoutParams().height;
+                } else {
+                    y += getMeasuredHeight();
+                }
+                if (bottomTabContainer.getTop() - y < 0) {
+                    y = bottomTabContainer.getTop();
+                }
+                bottomTabContainer.setTranslationY(-y);
+            }
+        }
     }
 
     Rect rect = new Rect();
@@ -2338,24 +2368,6 @@ public class EmojiView extends FrameLayout implements NotificationCenter.Notific
         } else {
             expandStickersByDragg = false;
             stickersTab.expandStickers(lastStickersX, false);
-        }
-    }
-
-    private void updateBottomTabContainerPosition() {
-        if (bottomTabContainer.getTag() == null && (delegate == null || !delegate.isSearchOpened())) {
-            View parent = (View) getParent();
-            if (parent != null) {
-                float y = getY() - parent.getHeight();
-                if (getLayoutParams().height > 0) {
-                    y += getLayoutParams().height;
-                } else {
-                    y += getMeasuredHeight();
-                }
-                if (bottomTabContainer.getTop() - y < 0) {
-                    y = bottomTabContainer.getTop();
-                }
-                bottomTabContainer.setTranslationY(-y);
-            }
         }
     }
 
@@ -3618,11 +3630,11 @@ public class EmojiView extends FrameLayout implements NotificationCenter.Notific
                         if (newHeight <= lastNotifyHeight) {
                             bottomTabContainer.setTranslationY(0);
                         } else {
-                            float y = getY() + getMeasuredHeight() - parent.getHeight();
-                            if (bottomTabContainer.getTop() - y < 0) {
-                                y = bottomTabContainer.getTop();
-                            }
-                            bottomTabContainer.setTranslationY(-y);
+//                            float y = getY() + getMeasuredHeight() - parent.getHeight() - bottomTabContainer.getTop();
+//                            if (bottomTabContainer.getTop() - y < 0) {
+//                                y = bottomTabContainer.getTop();
+//                            }
+//                            bottomTabContainer.setTranslationY(-y);
                         }
                     }
                 }
@@ -4053,7 +4065,7 @@ public class EmojiView extends FrameLayout implements NotificationCenter.Notific
             if (svgThumb != null) {
                 svgThumb.overrideWidthAndHeight(512, 512);
             }
-            if (object == null) {
+            if (object == null || MessageObject.isVideoSticker(document)) {
                 object = document;
             }
 
@@ -4071,7 +4083,7 @@ public class EmojiView extends FrameLayout implements NotificationCenter.Notific
             if (imageLocation == null) {
                 return;
             }
-            if (object instanceof TLRPC.Document && MessageObject.isAnimatedStickerDocument(document, true)) {
+            if (object instanceof TLRPC.Document && (MessageObject.isAnimatedStickerDocument(document, true) || MessageObject.isVideoSticker(document))) {
                 if (svgThumb != null) {
                     imageView.setImage(ImageLocation.getForDocument(document), "30_30", svgThumb, 0, set);
                 } else {
@@ -4263,7 +4275,7 @@ public class EmojiView extends FrameLayout implements NotificationCenter.Notific
                         }
                     };
                     horizontalListView.setSelectorRadius(AndroidUtilities.dp(4));
-                    horizontalListView.setSelectorDrawableColor(Theme.getColor(Theme.key_listSelector));
+                    horizontalListView.setSelectorDrawableColor(getThemedColor(Theme.key_listSelector));
                     horizontalListView.setTag(9);
                     horizontalListView.setItemAnimator(null);
                     horizontalListView.setLayoutAnimation(null);

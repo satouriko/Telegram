@@ -27,11 +27,13 @@ import org.telegram.messenger.UserConfig;
 import org.telegram.ui.ActionBar.ActionBarPopupWindow;
 import org.telegram.ui.ActionBar.Theme;
 
+import java.util.ArrayList;
+
 public class PopupSwipeBackLayout extends FrameLayout {
     private final static int DURATION = 300;
 
     SparseIntArray overrideHeightIndex = new SparseIntArray();
-    private float transitionProgress;
+    public float transitionProgress;
     private float toProgress = -1;
     private GestureDetectorCompat detector;
     private boolean isProcessingSwipe;
@@ -39,11 +41,12 @@ public class PopupSwipeBackLayout extends FrameLayout {
     private boolean isSwipeDisallowed;
     private Paint overlayPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private Paint foregroundPaint = new Paint();
+    private int foregroundColor = 0;
 
     private Path mPath = new Path();
     private RectF mRect = new RectF();
 
-    private OnSwipeBackProgressListener onSwipeBackProgressListener;
+    private ArrayList<OnSwipeBackProgressListener> onSwipeBackProgressListeners = new ArrayList<>();
     private boolean isSwipeBackDisallowed;
 
     private float overrideForegroundHeight;
@@ -113,12 +116,12 @@ public class PopupSwipeBackLayout extends FrameLayout {
     }
 
     /**
-     * Sets new swipeback listener
+     * add new swipeback listener
      *
      * @param onSwipeBackProgressListener New progress listener
      */
-    public void setOnSwipeBackProgressListener(OnSwipeBackProgressListener onSwipeBackProgressListener) {
-        this.onSwipeBackProgressListener = onSwipeBackProgressListener;
+    public void addOnSwipeBackProgressListener(OnSwipeBackProgressListener onSwipeBackProgressListener) {
+        onSwipeBackProgressListeners.add(onSwipeBackProgressListener);
     }
 
     @Override
@@ -126,7 +129,11 @@ public class PopupSwipeBackLayout extends FrameLayout {
         int i = indexOfChild(child);
         int s = canvas.save();
         if (i != 0) {
-            foregroundPaint.setColor(Theme.getColor(Theme.key_actionBarDefaultSubmenuBackground, resourcesProvider));
+            if (foregroundColor == 0) {
+                foregroundPaint.setColor(Theme.getColor(Theme.key_actionBarDefaultSubmenuBackground, resourcesProvider));
+            } else {
+                foregroundPaint.setColor(foregroundColor);
+            }
             canvas.drawRect(child.getX(), 0, child.getX() + child.getMeasuredWidth(), getMeasuredHeight(), foregroundPaint);
         }
         boolean b = super.drawChild(canvas, child, drawingTime);
@@ -138,37 +145,36 @@ public class PopupSwipeBackLayout extends FrameLayout {
         return b;
     }
 
-    /**
-     * Invalidates transformations
-     */
-    private void invalidateTransforms() {
+    public void invalidateTransforms() {
 
-        if (onSwipeBackProgressListener != null) {
-            onSwipeBackProgressListener.onSwipeBackProgress(this, toProgress, transitionProgress);
+        if (!onSwipeBackProgressListeners.isEmpty()) {
+            for (int i = 0; i < onSwipeBackProgressListeners.size(); i++) {
+                onSwipeBackProgressListeners.get(i).onSwipeBackProgress(this, toProgress, transitionProgress);
+            }
         }
 
-        View bg = getChildAt(0);
-        View fg = null;
+        View backgroundView = getChildAt(0);
+        View foregroundView = null;
         if (currentForegroundIndex >= 0 && currentForegroundIndex < getChildCount()) {
-            fg = getChildAt(currentForegroundIndex);
+            foregroundView = getChildAt(currentForegroundIndex);
         }
-        bg.setTranslationX(-transitionProgress * getWidth() * 0.5f);
+        backgroundView.setTranslationX(-transitionProgress * getWidth() * 0.5f);
         float bSc = 0.95f + (1f - transitionProgress) * 0.05f;
-        bg.setScaleX(bSc);
-        bg.setScaleY(bSc);
-        if (fg != null) {
-            fg.setTranslationX((1f - transitionProgress) * getWidth());
+        backgroundView.setScaleX(bSc);
+        backgroundView.setScaleY(bSc);
+        if (foregroundView != null) {
+            foregroundView.setTranslationX((1f - transitionProgress) * getWidth());
         }
         invalidateVisibility();
 
-        float fW = bg.getMeasuredWidth(), fH = bg.getMeasuredHeight();
+        float fW = backgroundView.getMeasuredWidth(), fH = backgroundView.getMeasuredHeight();
         float tW = 0;
         float tH = 0;
-        if (fg != null) {
-            tW = fg.getMeasuredWidth();
-            tH = overrideForegroundHeight != 0 ? overrideForegroundHeight : fg.getMeasuredHeight();
+        if (foregroundView != null) {
+            tW = foregroundView.getMeasuredWidth();
+            tH = overrideForegroundHeight != 0 ? overrideForegroundHeight : foregroundView.getMeasuredHeight();
         }
-        if (bg.getMeasuredWidth() == 0 || bg.getMeasuredHeight() == 0) {
+        if (backgroundView.getMeasuredWidth() == 0 || backgroundView.getMeasuredHeight() == 0) {
             return;
         }
 
@@ -177,8 +183,10 @@ public class PopupSwipeBackLayout extends FrameLayout {
         float h = fH + (tH - fH) * transitionProgress;
         w += p.getPaddingLeft() + p.getPaddingRight();
         h += p.getPaddingTop() + p.getPaddingBottom();
+        p.updateAnimation = false;
         p.setBackScaleX(w / p.getMeasuredWidth());
         p.setBackScaleY(h / p.getMeasuredHeight());
+        p.updateAnimation = true;
 
         for (int i = 0; i < getChildCount(); i++) {
             View ch = getChildAt(i);
@@ -300,12 +308,20 @@ public class PopupSwipeBackLayout extends FrameLayout {
         animateToState(1, 0);
     }
 
-    /**
-     * Closes foreground view
-     */
     public void closeForeground() {
+        closeForeground(true);
+    }
+
+    public void closeForeground(boolean animated) {
         if (isAnimationInProgress) return;
-        animateToState(0, 0);
+        if (!animated) {
+            currentForegroundIndex = -1;
+            transitionProgress = 0;
+            invalidateTransforms();
+            return;
+        } else {
+            animateToState(0, 0);
+        }
     }
 
     @Override
@@ -431,6 +447,10 @@ public class PopupSwipeBackLayout extends FrameLayout {
         });
         animator.start();
         foregroundAnimator = animator;
+    }
+
+    public void setForegroundColor(int color) {
+        foregroundColor = color;
     }
 
     public interface OnSwipeBackProgressListener {

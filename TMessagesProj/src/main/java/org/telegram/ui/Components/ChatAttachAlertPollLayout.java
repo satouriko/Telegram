@@ -433,11 +433,11 @@ public class ChatAttachAlertPollLayout extends ChatAttachAlert.AttachAlertLayout
             if (chatActivity.isInScheduleMode()) {
                 AlertsCreator.createScheduleDatePickerDialog(chatActivity.getParentActivity(), chatActivity.getDialogId(), (notify, scheduleDate) -> {
                     delegate.sendPoll(poll, params, notify, scheduleDate);
-                    parentAlert.dismiss();
+                    parentAlert.dismiss(true);
                 });
             } else {
                 delegate.sendPoll(poll, params, true, 0);
-                parentAlert.dismiss();
+                parentAlert.dismiss(true);
             }
         }
     }
@@ -638,7 +638,7 @@ public class ChatAttachAlertPollLayout extends ChatAttachAlert.AttachAlertLayout
     }
 
     @Override
-    void onShow() {
+    void onShow(ChatAttachAlert.AttachAlertLayout previousLayout) {
         if (quizOnly == 1) {
             parentAlert.actionBar.setTitle(LocaleController.getString("NewQuiz", R.string.NewQuiz));
         } else {

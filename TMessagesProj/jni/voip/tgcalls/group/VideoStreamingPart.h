@@ -8,6 +8,9 @@
 #include "api/video/video_frame.h"
 #include "absl/types/optional.h"
 
+#include "AudioStreamingPart.h"
+#include "AudioStreamingPartInternal.h"
+
 namespace tgcalls {
 
 class VideoStreamingPartState;
@@ -16,21 +19,25 @@ struct VideoStreamingPartFrame {
     std::string endpointId;
     webrtc::VideoFrame frame;
     double pts = 0;
-    double duration = 0.0;
     int index = 0;
 
-    VideoStreamingPartFrame(std::string endpointId_, webrtc::VideoFrame const &frame_, double pts_, double duration_, int index_) :
+    VideoStreamingPartFrame(std::string endpointId_, webrtc::VideoFrame const &frame_, double pts_, int index_) :
     endpointId(endpointId_),
     frame(frame_),
     pts(pts_),
-    duration(duration_),
     index(index_) {
     }
 };
 
 class VideoStreamingPart {
 public:
-    explicit VideoStreamingPart(std::vector<uint8_t> &&data);
+    enum class ContentType {
+        Audio,
+        Video
+    };
+    
+public:
+    explicit VideoStreamingPart(std::vector<uint8_t> &&data, VideoStreamingPart::ContentType contentType);
     ~VideoStreamingPart();
     
     VideoStreamingPart(const VideoStreamingPart&) = delete;
@@ -43,6 +50,10 @@ public:
 
     absl::optional<VideoStreamingPartFrame> getFrameAtRelativeTimestamp(double timestamp);
     absl::optional<std::string> getActiveEndpointId() const;
+    bool hasRemainingFrames() const;
+    
+    int getAudioRemainingMilliseconds();
+    std::vector<AudioStreamingPart::StreamingPartChannel> getAudio10msPerChannel(AudioStreamingPartPersistentDecoder &persistentDecoder);
     
 private:
     VideoStreamingPartState *_state = nullptr;

@@ -14,8 +14,6 @@ import android.widget.TextView;
 
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.LocaleController;
-import org.telegram.messenger.R;
-import org.telegram.ui.Components.CheckBox;
 import org.telegram.ui.Components.CheckBox2;
 import org.telegram.ui.Components.LayoutHelper;
 
@@ -36,6 +34,7 @@ public class ActionBarMenuSubItem extends FrameLayout {
 
     private int itemHeight = 48;
     private final Theme.ResourcesProvider resourcesProvider;
+    Runnable openSwipeBackLayout;
 
     public ActionBarMenuSubItem(Context context, boolean top, boolean bottom) {
         this(context, false, top, bottom);
@@ -110,7 +109,7 @@ public class ActionBarMenuSubItem extends FrameLayout {
         if (rightIcon == null) {
             rightIcon = new ImageView(getContext());
             rightIcon.setScaleType(ImageView.ScaleType.CENTER);
-            rightIcon.setColorFilter(textColor, PorterDuff.Mode.MULTIPLY);
+            rightIcon.setColorFilter(iconColor, PorterDuff.Mode.MULTIPLY);
             if (LocaleController.isRTL) {
                 rightIcon.setScaleX(-1);
             }
@@ -128,6 +127,7 @@ public class ActionBarMenuSubItem extends FrameLayout {
         textView.setLines(2);
         textView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 14);
         textView.setSingleLine(false);
+        textView.setGravity(Gravity.CENTER_VERTICAL);
     }
 
     public void setTextAndIcon(CharSequence text, int icon, Drawable iconDrawable) {
@@ -237,5 +237,15 @@ public class ActionBarMenuSubItem extends FrameLayout {
 
     public CheckBox2 getCheckView() {
         return checkView;
+    }
+
+    public void openSwipeBack() {
+        if (openSwipeBackLayout != null) {
+            openSwipeBackLayout.run();
+        }
+    }
+
+    public ImageView getRightIcon() {
+        return rightIcon;
     }
 }

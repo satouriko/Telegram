@@ -14,11 +14,11 @@ import org.telegram.messenger.AndroidUtilities;
 
 public class CellFlickerDrawable {
 
-    private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Shader gradientShader;
+    private Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private Shader gradientShader;
 
-    private final Paint paintOutline = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Shader gradientShader2;
+    private Paint paintOutline = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private Shader gradientShader2;
     int size;
 
     int parentWidth;
@@ -27,8 +27,10 @@ public class CellFlickerDrawable {
 
     Matrix matrix = new Matrix();
 
+    public boolean repeatEnabled = true;
     public boolean drawFrame = true;
     public float repeatProgress = 1.2f;
+    public float animationSpeedScale = 1f;
 
     public CellFlickerDrawable() {
         this(64, 204);
@@ -43,12 +45,34 @@ public class CellFlickerDrawable {
         paintOutline.setStrokeWidth(AndroidUtilities.dp(2));
     }
 
+    public void setColors(int color) {
+        setColors(color, 64, 204);
+    }
+
+    public void setColors(int color, int alpha1, int alpha2) {
+        gradientShader = new LinearGradient(0, 0, size, 0, new int[]{Color.TRANSPARENT, ColorUtils.setAlphaComponent(color, alpha1), Color.TRANSPARENT}, null, Shader.TileMode.CLAMP);
+        gradientShader2 = new LinearGradient(0, 0, size, 0, new int[]{Color.TRANSPARENT, ColorUtils.setAlphaComponent(color, alpha2), Color.TRANSPARENT}, null, Shader.TileMode.CLAMP);
+        paint.setShader(gradientShader);
+        paintOutline.setShader(gradientShader2);
+    }
+
+    public float getProgress() {
+        return progress;
+    }
+
+    public void setProgress(float progress) {
+        this.progress = progress;
+    }
+
     public void draw(Canvas canvas, RectF rectF, float rad) {
+        if (progress > 1f && !repeatEnabled) {
+            return;
+        }
         long currentTime = System.currentTimeMillis();
         if (lastUpdateTime != 0) {
             long dt = currentTime - lastUpdateTime;
             if (dt > 10) {
-                progress += dt / 1200f;
+                progress += (dt / 1200f) * animationSpeedScale;
                 if (progress > repeatProgress) {
                     progress = 0;
                 }
