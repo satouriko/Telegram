@@ -94,6 +94,15 @@ public class ThemePreviewMessagesCell extends LinearLayout {
             } else {
                 message.message = LocaleController.getString("NewThemePreviewReply", R.string.NewThemePreviewReply);
             }
+            String greeting = "\uD83D\uDC4B";
+            int index = message.message.indexOf(greeting);
+            if (index >= 0) {
+                TLRPC.TL_messageEntityCustomEmoji entity = new TLRPC.TL_messageEntityCustomEmoji();
+                entity.offset = index;
+                entity.length = greeting.length();
+                entity.document_id = 5386654653003864312L;
+                message.entities.add(entity);
+            }
             message.date = date + 60;
             message.dialog_id = 1;
             message.flags = 259;
@@ -124,6 +133,15 @@ public class ThemePreviewMessagesCell extends LinearLayout {
                     message.entities.add(entityUrl);
                 }
                 message.message = builder.toString();
+            }
+            String cool = "\uD83D\uDE0E";
+            int index1 = message.message.indexOf(cool);
+            if (index1 >= 0) {
+                TLRPC.TL_messageEntityCustomEmoji entity = new TLRPC.TL_messageEntityCustomEmoji();
+                entity.offset = index1;
+                entity.length = cool.length();
+                entity.document_id = 5373141891321699086L;
+                message.entities.add(entity);
             }
             message.date = date + 960;
             message.dialog_id = 1;
@@ -258,6 +276,9 @@ public class ThemePreviewMessagesCell extends LinearLayout {
     @Override
     protected void onDraw(Canvas canvas) {
         Drawable newDrawable = Theme.getCachedWallpaperNonBlocking();
+        if (Theme.wallpaperLoadTask != null) {
+            invalidate();
+        }
         if (newDrawable != backgroundDrawable && newDrawable != null) {
             if (Theme.isAnimatingColor()) {
                 oldBackgroundDrawable = backgroundDrawable;
@@ -274,11 +295,16 @@ public class ThemePreviewMessagesCell extends LinearLayout {
             if (drawable == null) {
                 continue;
             }
+            int alpha;
             if (a == 1 && oldBackgroundDrawable != null && parentLayout != null) {
-                drawable.setAlpha((int) (255 * themeAnimationValue));
+                alpha = (int) (255 * themeAnimationValue);
             } else {
-                drawable.setAlpha(255);
+                alpha = 255;
             }
+            if (alpha <= 0) {
+                continue;
+            }
+            drawable.setAlpha(alpha);
             if (drawable instanceof ColorDrawable || drawable instanceof GradientDrawable || drawable instanceof MotionBackgroundDrawable) {
                 drawable.setBounds(0, 0, getMeasuredWidth(), getMeasuredHeight());
                 if (drawable instanceof BackgroundGradientDrawable) {
@@ -289,6 +315,7 @@ public class ThemePreviewMessagesCell extends LinearLayout {
                 }
             } else if (drawable instanceof BitmapDrawable) {
                 BitmapDrawable bitmapDrawable = (BitmapDrawable) drawable;
+                bitmapDrawable.setFilterBitmap(true);
                 if (bitmapDrawable.getTileModeX() == Shader.TileMode.REPEAT) {
                     canvas.save();
                     float scale = 2.0f / AndroidUtilities.density;

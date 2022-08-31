@@ -78,6 +78,7 @@ public class NotificationCenter {
     public static final int stickersDidLoad = totalEvents++;
     public static final int diceStickersDidLoad = totalEvents++;
     public static final int featuredStickersDidLoad = totalEvents++;
+    public static final int featuredEmojiDidLoad = totalEvents++;
     public static final int groupStickersDidLoad = totalEvents++;
     public static final int messagesReadContent = totalEvents++;
     public static final int botInfoDidLoad = totalEvents++;
@@ -124,6 +125,8 @@ public class NotificationCenter {
     public static final int stickersImportComplete = totalEvents++;
     public static final int dialogDeleted = totalEvents++;
     public static final int webViewResultSent = totalEvents++;
+    public static final int voiceTranscriptionUpdate = totalEvents++;
+    public static final int animatedEmojiDocumentLoaded = totalEvents++;
 
     public static final int didGenerateFingerprintKeyPair = totalEvents++;
 
@@ -191,6 +194,8 @@ public class NotificationCenter {
 
     public static final int updateBotMenuButton = totalEvents++;
 
+    public static final int didUpdatePremiumGiftStickers = totalEvents++;
+
     //global
     public static final int pushMessagesUpdated = totalEvents++;
     public static final int stopEncodingService = totalEvents++;
@@ -244,6 +249,12 @@ public class NotificationCenter {
     public static final int onActivityResultReceived = totalEvents++;
     public static final int onRequestPermissionResultReceived = totalEvents++;
     public static final int onUserRingtonesUpdated = totalEvents++;
+    public static final int currentUserPremiumStatusChanged = totalEvents++;
+    public static final int premiumPromoUpdated = totalEvents++;
+    public static final int premiumStatusChangedGlobal = totalEvents++;
+    public static final int currentUserShowLimitReachedDialog = totalEvents++;
+    public static final int billingProductDetailsUpdated = totalEvents++;
+    public static final int premiumStickersPreviewLoaded = totalEvents++;
 
     private SparseArray<ArrayList<NotificationCenterDelegate>> observers = new SparseArray<>();
     private SparseArray<ArrayList<NotificationCenterDelegate>> removeAfterBroadcast = new SparseArray<>();
