@@ -25,7 +25,7 @@ android {
     compileSdkVersion 31
     buildToolsVersion '31.0.0'
 
-    defaultConfig.applicationId = APP_PACKAGE
+    defaultConfig.applicationId = "com.cool2645.nekolite"
 
     sourceSets.main.jniLibs.srcDirs = ['../TMessagesProj/jni/']
 
@@ -173,7 +173,7 @@ android {
         }
     }
 
-    defaultConfig.versionCode = Integer.parseInt(APP_VERSION_CODE)
+    defaultConfig.versionCode = 2757
 
     applicationVariants.all { variant ->
         variant.outputs.all { output ->
@@ -192,7 +192,7 @@ android {
     defaultConfig {
         minSdkVersion 16
         targetSdkVersion 30
-        versionName APP_VERSION_NAME
+        versionName "8.9.3"
         ndkVersion "21.4.7075529"
 
         multiDexEnabled true
